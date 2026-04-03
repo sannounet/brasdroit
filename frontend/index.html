@@ -1664,7 +1664,8 @@ async function login(email, password) {
   _user = data;
   localStorage.setItem('bd_token', _token);
   localStorage.setItem('bd_user', JSON.stringify(_user));
-  document.getElementById('sf-company').textContent = data.entreprise_nom;
+  const sfEl = document.getElementById('sf-company');
+  if (sfEl) sfEl.textContent = data.entreprise_nom;
   return true;
 }
 
@@ -1929,7 +1930,8 @@ async function doRegister() {
   const ok = await register(email, pwd, prenom, nom, ent);
   if (ok) {
     document.getElementById('m-login').classList.remove('open');
-    document.getElementById('sf-company').textContent = ent;
+    const sfEl2 = document.getElementById('sf-company');
+    if (sfEl2) sfEl2.textContent = ent;
     loadDashboard();
     showToast('Compte créé ! Bienvenue ' + prenom, 'success');
   }
@@ -1946,7 +1948,7 @@ document.addEventListener('DOMContentLoaded', function() {
     showLoginModal();
   } else {
     // Token existant — charger les données
-    if (_user) document.getElementById('sf-company').textContent = _user.entreprise_nom || '';
+    if (_user) { const sfEl3 = document.getElementById('sf-company'); if (sfEl3) sfEl3.textContent = _user.entreprise_nom || ''; }
     loadDashboard();
   }
 
