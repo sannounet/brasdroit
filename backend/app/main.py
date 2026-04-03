@@ -62,3 +62,20 @@ def root():
 def health():
     """Endpoint de santé pour Render."""
     return {"status": "healthy"}
+
+
+@app.get("/debug/db")
+def debug_db():
+    """Vérifie la connexion DB — À SUPPRIMER en production."""
+    from sqlalchemy import text
+    from app.core.database import SessionLocal
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        tables = db.execute(text(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        )).fetchall()
+        db.close()
+        return {"db": "ok", "tables": [t[0] for t in tables]}
+    except Exception as e:
+        return {"db": "error", "detail": str(e)}
