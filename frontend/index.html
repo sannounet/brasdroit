@@ -1963,12 +1963,385 @@ document.addEventListener('DOMContentLoaded', function() {
   const originalGo = window.go;
   window.go = function(id) {
     originalGo(id);
-    if (id === 'factures') loadFactures();
-    if (id === 'employes') loadEmployes();
-    if (id === 'alertes') loadAlertes();
-    if (id === 'dashboard') loadDashboard();
+    const loaders = {
+      'dashboard': loadDashboard,
+      'alertes': loadAlertes,
+      'factures': loadFactures,
+      'employes': loadEmployes,
+      'bdc': loadBonsCommande,
+      'encaiss': loadEncaissements,
+      'journal': loadJournal,
+      'lettrage': loadLettrage,
+      'plan': loadPlanComptes,
+      'recovery': loadRecouvrement,
+      'treso': loadTresorerie,
+      'releves': loadReleves,
+      'charges': loadCharges,
+      'bilan': loadBilan,
+      'resultat': loadResultat,
+      'ratios': loadRatios,
+      'decl-tva': loadTVA,
+      'decl-is': loadIS,
+      'decl-urssaf': loadURSSAF,
+      'dsn': loadDSN,
+      'ras': loadRAS,
+      'budget': loadBudget,
+      'journal-paie': loadJournalPaie,
+    };
+    if (loaders[id]) loaders[id]();
   };
 });
+
+// ── Bons de commande ──
+async function loadBonsCommande() {
+  const data = await api.get('/api/facturation/bc');
+  if (!data) return;
+  const tbody = document.querySelector('#p-bdc table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.map(bc => {
+    const cls = {brouillon:'tgy',valide:'tw2',converti:'tg',annule:'tr2'}[bc.statut]||'tgy';
+    const label = {brouillon:'Brouillon',valide:'Validé',converti:'Converti',annule:'Annulé'}[bc.statut]||bc.statut;
+    return `<tr>
+      <td><b>${bc.numero}</b></td><td>${bc.client_id}</td><td>${bc.date_bc}</td>
+      <td class="tr">${fmtEur(bc.montant_ht)}</td>
+      <td><span class="tag ${cls}">${label}</span></td>
+      <td>${bc.statut==='valide'?`<button class="btn btn-sm btn-s" onclick="convertirBC(${bc.id})">→ Facture</button>`:''}</td>
+    </tr>`;
+  }).join('');
+}
+async function convertirBC(id) {
+  const data = await api.post('/api/facturation/bc/'+id+'/convertir');
+  if (data) { showToast('BC converti en facture '+data.numero,'success'); loadBonsCommande(); }
+}
+
+// ── Encaissements / Décaissements ──
+async function loadEncaissements() {
+  const data = await api.get('/api/tresorerie/solde');
+  if (!data) return;
+  const cards = document.querySelectorAll('#p-encaiss .mv');
+  if (cards[0]) cards[0].textContent = fmtEur(data.encaissements_mois);
+  if (cards[2]) cards[2].textContent = fmtEur(Math.abs(data.decaissements_mois));
+  const now = new Date();
+  const mvts = await api.get('/api/tresorerie/releves?annee='+now.getFullYear()+'&mois='+(now.getMonth()+1));
+  if (!mvts) return;
+  const encTbody = document.querySelector('#p-encaiss .g2 .card:first-child tbody');
+  const decTbody = document.querySelector('#p-encaiss .g2 .card:last-child tbody');
+  if (encTbody) {
+    encTbody.innerHTML = (mvts.mouvements||[]).filter(m=>m.montant>0).map(m =>
+      `<tr><td>${m.date_operation}</td><td>${m.categorie||''}</td><td class="mono">${m.libelle.substring(0,30)}</td><td class="tr pos">${fmtEur(m.montant)}</td><td><span class="tag tg">✓</span></td></tr>`
+    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun encaissement</td></tr>';
+  }
+  if (decTbody) {
+    decTbody.innerHTML = (mvts.mouvements||[]).filter(m=>m.montant<0).map(m =>
+      `<tr><td>${m.date_operation}</td><td>${m.categorie||''}</td><td>${m.libelle.substring(0,30)}</td><td class="tr neg">${fmtEur(Math.abs(m.montant))}</td><td><span class="tag tg">✓</span></td></tr>`
+    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun décaissement</td></tr>';
+  }
+}
+
+// ── Journal comptable ──
+async function loadJournal() {
+  const data = await api.get('/api/compta/ecritures');
+  if (!data) return;
+  const tbody = document.querySelector('#p-journal table tbody');
+  if (!tbody) return;
+  let flags = 0;
+  tbody.innerHTML = data.map(e => {
+    const hasFlag = e.flag_type ? true : false;
+    if (hasFlag) flags++;
+    const bg = hasFlag ? 'background:var(--rb)' : '';
+    const flagTag = hasFlag ? `<span class="tag tr2">⚠ ${e.flag_type}</span>` : '<span class="tag tg">OK</span>';
+    return `<tr style="${bg}">
+      <td>${e.date_ecriture}</td><td class="mono">${e.numero_piece||''}</td>
+      <td class="mono">${e.compte_debit}</td><td>${e.libelle}</td>
+      <td class="tr">${fmtEur(e.montant)}</td><td class="tr">${e.compte_credit}</td>
+      <td>${e.is_lettree?'<span class="tag tg">'+e.lettre+'</span>':'<span class="tag tgy">—</span>'}</td>
+      <td>${flagTag}</td>
+    </tr>`;
+  }).join('');
+  const flagCountEls = document.querySelectorAll('#p-journal .tb-r .tag');
+  if (flagCountEls[0]) flagCountEls[0].textContent = flags + ' anomalies';
+}
+
+// ── Lettrage ──
+async function loadLettrage() {
+  const data = await api.get('/api/compta/lettrage');
+  if (!data) return;
+  const bankTbody = document.querySelector('#p-lettrage .g2 .card:first-child tbody');
+  const comptaTbody = document.querySelector('#p-lettrage .g2 .card:last-child tbody');
+  if (bankTbody) {
+    bankTbody.innerHTML = (data.mouvements||[]).map(m => {
+      const cls = m.montant >= 0 ? 'pos' : 'neg';
+      const tag = m.is_lettree ? `<span class="tag tg">${m.lettre||'✓'}</span>` : '<span class="tag tr2">?</span>';
+      return `<tr><td>${m.date_operation}</td><td>${m.libelle.substring(0,35)}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${tag}</td></tr>`;
+    }).join('');
+  }
+  if (comptaTbody) {
+    comptaTbody.innerHTML = (data.ecritures||[]).map(e => {
+      const tag = e.is_lettree ? `<span class="tag tg">${e.lettre||'✓'}</span>` : '<span class="tag tw2">—</span>';
+      return `<tr><td>${e.date_ecriture}</td><td class="mono">${e.compte_debit}</td><td>${e.libelle.substring(0,30)}</td><td class="tr">${fmtEur(e.montant)}</td><td>${tag}</td></tr>`;
+    }).join('');
+  }
+}
+
+// ── Plan de comptes ──
+async function loadPlanComptes() {
+  const data = await api.get('/api/compta/comptes');
+  if (!data) return;
+  const tbody = document.querySelector('#p-plan table tbody');
+  if (!tbody) return;
+  const classLabels = {1:'Capitaux',2:'Immob.',3:'Stocks',4:'Tiers',5:'Finance',6:'Charges',7:'Produits'};
+  tbody.innerHTML = data.map(c => {
+    const cls = c.classe >= 6 ? (c.classe === 7 ? 'tg' : 'tgy') : 'tb2';
+    return `<tr>
+      <td class="mono">${c.numero}</td><td>${c.libelle}</td>
+      <td><span class="tag ${cls}">${classLabels[c.classe]||c.classe}</span></td>
+      <td class="tr pos">${fmtEur(c.solde_debit||0)}</td>
+      <td class="tr neg">${fmtEur(c.solde_credit||0)}</td>
+      <td>${c.is_active?'<span class="tag tg">Actif</span>':'<span class="tag tgy">Inactif</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Recouvrement ──
+async function loadRecouvrement() {
+  const data = await api.get('/api/facturation/dashboard-recouvrement');
+  if (!data) return;
+  const tbody = document.querySelector('#p-recovery table tbody');
+  if (!tbody) return;
+  const factures = await api.get('/api/facturation/factures');
+  if (!factures) return;
+  const enRetard = factures.filter(f => f.statut === 'en_retard' || f.statut === 'judiciaire');
+  tbody.innerHTML = enRetard.map(f => {
+    const jours = Math.floor((Date.now() - new Date(f.date_echeance).getTime()) / 86400000);
+    return `<tr>
+      <td>${f.client_id}</td><td>${f.numero}</td><td class="tr neg">${fmtEur(f.montant_ttc)}</td>
+      <td>J+${jours}</td><td>R${f.nb_relances||0}</td>
+      <td><button class="btn btn-sm btn-d" onclick="relancerFacture(${f.id},'R${Math.min((f.nb_relances||0)+1,3)}')">Relancer</button></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--g)">Aucun impayé ✓</td></tr>';
+}
+
+// ── Trésorerie ──
+async function loadTresorerie() {
+  const data = await api.get('/api/tresorerie/solde');
+  if (!data) return;
+  const cards = document.querySelectorAll('#p-treso .mv');
+  if (cards[0]) cards[0].textContent = fmtEur(data.solde);
+  if (cards[1]) cards[1].textContent = fmtEur(data.encaissements_mois);
+  if (cards[2]) cards[2].textContent = fmtEur(Math.abs(data.decaissements_mois));
+  const mvts = await api.get('/api/tresorerie/mouvements');
+  if (!mvts) return;
+  const tbody = document.querySelector('#p-treso table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = mvts.slice(0,20).map(m => {
+    const cls = m.montant >= 0 ? 'pos' : 'neg';
+    return `<tr><td>${m.date_operation}</td><td>${m.libelle}</td><td>${m.categorie||''}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${m.is_lettree?'<span class="tag tg">✓</span>':'<span class="tag tgy">—</span>'}</td></tr>`;
+  }).join('');
+}
+
+// ── Relevés bancaires ──
+async function loadReleves() {
+  const now = new Date();
+  const data = await api.get('/api/tresorerie/releves?annee='+now.getFullYear()+'&mois='+(now.getMonth()+1));
+  if (!data) return;
+  const tbody = document.querySelector('#p-releves table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.mouvements||[]).map(m => {
+    const cls = m.montant >= 0 ? 'pos' : 'neg';
+    return `<tr><td>${m.date_operation}</td><td>${m.libelle}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td></tr>`;
+  }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucun mouvement ce mois</td></tr>';
+}
+
+// ── Charges annuelles ──
+async function loadCharges() {
+  const data = await api.get('/api/tresorerie/charges?annee='+new Date().getFullYear());
+  if (!data) return;
+  const tbody = document.querySelector('#p-charges table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.categories||[]).map(c =>
+    `<tr><td>${c.categorie||'Autre'}</td><td class="tr neg">${fmtEur(Math.abs(c.total))}</td></tr>`
+  ).join('') || '<tr><td colspan="2" style="text-align:center;color:var(--t3)">Aucune charge</td></tr>';
+}
+
+// ── Bilan ──
+async function loadBilan() {
+  const annee = new Date().getFullYear() - 1;
+  const data = await api.get('/api/compta/bilan?annee='+annee);
+  if (!data) return;
+  const actifTbody = document.querySelector('#p-bilan .g2 .card:first-child tbody');
+  const passifTbody = document.querySelector('#p-bilan .g2 .card:last-child tbody');
+  if (actifTbody) {
+    actifTbody.innerHTML = (data.actif||[]).map(a =>
+      `<tr><td class="mono">${a.compte}</td><td>${a.libelle}</td><td class="tr pos">${fmtEur(a.montant)}</td></tr>`
+    ).join('');
+    actifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL ACTIF</td><td class="tr">${fmtEur(data.total_actif)}</td></tr>`;
+  }
+  if (passifTbody) {
+    passifTbody.innerHTML = (data.passif||[]).map(p =>
+      `<tr><td class="mono">${p.compte}</td><td>${p.libelle}</td><td class="tr neg">${fmtEur(p.montant)}</td></tr>`
+    ).join('');
+    passifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL PASSIF</td><td class="tr">${fmtEur(data.total_passif)}</td></tr>`;
+  }
+}
+
+// ── Compte de résultat ──
+async function loadResultat() {
+  const annee = new Date().getFullYear() - 1;
+  const data = await api.get('/api/compta/resultat?annee='+annee);
+  if (!data) return;
+  const chTbody = document.querySelector('#p-resultat .g2 .card:first-child tbody');
+  const prTbody = document.querySelector('#p-resultat .g2 .card:last-child tbody');
+  if (chTbody) {
+    chTbody.innerHTML = (data.charges||[]).map(c =>
+      `<tr><td class="mono">${c.compte}</td><td>${c.libelle}</td><td class="tr neg">${fmtEur(c.montant)}</td></tr>`
+    ).join('');
+    chTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL CHARGES</td><td class="tr">${fmtEur(data.total_charges)}</td></tr>`;
+  }
+  if (prTbody) {
+    prTbody.innerHTML = (data.produits||[]).map(p =>
+      `<tr><td class="mono">${p.compte}</td><td>${p.libelle}</td><td class="tr pos">${fmtEur(p.montant)}</td></tr>`
+    ).join('');
+    prTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL PRODUITS</td><td class="tr">${fmtEur(data.total_produits)}</td></tr>`;
+  }
+  const resEl = document.querySelector('#p-resultat .mv');
+  if (resEl) {
+    const resultat = (data.total_produits||0) - (data.total_charges||0);
+    resEl.textContent = fmtEur(resultat);
+    resEl.style.color = resultat >= 0 ? 'var(--g)' : 'var(--r)';
+  }
+}
+
+// ── Ratios ──
+async function loadRatios() {
+  const annee = new Date().getFullYear() - 1;
+  const data = await api.get('/api/compta/ratios?annee='+annee);
+  if (!data) return;
+  const container = document.querySelector('#p-ratios .content');
+  if (!container) return;
+  const items = [
+    {label:'Marge brute', value: (data.marge_brute||0).toFixed(1)+'%', color: data.marge_brute>30?'var(--g)':'var(--a)'},
+    {label:'Rentabilité nette', value: (data.rentabilite_nette||0).toFixed(1)+'%', color: data.rentabilite_nette>0?'var(--g)':'var(--r)'},
+    {label:'DSO (jours)', value: Math.round(data.dso||0)+' j', color: data.dso<45?'var(--g)':data.dso<60?'var(--a)':'var(--r)'},
+    {label:'Endettement', value: (data.ratio_endettement||0).toFixed(1)+'%', color: data.ratio_endettement<100?'var(--g)':'var(--r)'},
+  ];
+  const ratioCards = container.querySelectorAll('.mc');
+  items.forEach((item, i) => {
+    if (ratioCards[i]) {
+      ratioCards[i].innerHTML = `<div class="ml">${item.label}</div><div class="mv" style="color:${item.color}">${item.value}</div>`;
+    }
+  });
+}
+
+// ── TVA ──
+async function loadTVA() {
+  const data = await api.get('/api/declarations/tva?annee='+new Date().getFullYear());
+  if (!data) return;
+  const tbody = document.querySelector('#p-decl-tva table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.trimestres||data||[]).map(t => {
+    const net = (t.tva_collectee||0) - (t.tva_deductible||0);
+    return `<tr>
+      <td>${t.periode||t.periode_mois||''}</td>
+      <td class="tr">${fmtEur(t.tva_collectee||0)}</td>
+      <td class="tr">${fmtEur(t.tva_deductible||0)}</td>
+      <td class="tr ${net>0?'neg':'pos'}">${fmtEur(net)}</td>
+      <td><span class="tag ${t.statut==='validee'?'tg':t.statut==='a_preparer'?'tw2':'tb2'}">${t.statut||''}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucune déclaration TVA</td></tr>';
+}
+
+// ── IS ──
+async function loadIS() {
+  const data = await api.get('/api/declarations/is?annee='+(new Date().getFullYear()-1));
+  if (!data) return;
+  const container = document.querySelector('#p-decl-is .content');
+  if (!container) return;
+  const cards = container.querySelectorAll('.mv');
+  if (cards[0]) cards[0].textContent = fmtEur(data.resultat_fiscal||0);
+  if (cards[1]) cards[1].textContent = fmtEur(data.is_total||0);
+  if (cards[2]) cards[2].textContent = fmtEur(data.acomptes_payes||0);
+}
+
+// ── URSSAF ──
+async function loadURSSAF() {
+  const data = await api.get('/api/declarations/urssaf?annee='+new Date().getFullYear());
+  if (!data) return;
+  const tbody = document.querySelector('#p-decl-urssaf table tbody');
+  if (!tbody) return;
+  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  tbody.innerHTML = (data.mois||data||[]).map(m =>
+    `<tr><td>${moisNoms[m.mois]||m.mois} ${m.annee||''}</td>
+    <td class="tr">${fmtEur(m.cotis_salariales||0)}</td>
+    <td class="tr">${fmtEur(m.cotis_patronales||0)}</td>
+    <td class="tr neg">${fmtEur((m.cotis_salariales||0)+(m.cotis_patronales||0))}</td></tr>`
+  ).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+}
+
+// ── DSN ──
+async function loadDSN() {
+  const now = new Date();
+  const mois = now.getMonth() || 12;
+  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const data = await api.get('/api/declarations/dsn?annee='+annee+'&mois='+mois);
+  if (!data) return;
+  const tbody = document.querySelector('#p-dsn table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.employes||[]).map(e =>
+    `<tr><td>${e.nom} ${e.prenom}</td><td>${e.type_contrat||''}</td>
+    <td class="tr">${fmtEur(e.salaire_brut)}</td><td class="tr">${fmtEur(e.net_a_payer)}</td>
+    <td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`
+  ).join('') || '<tr><td colspan="5">Aucun bulletin</td></tr>';
+}
+
+// ── RAS (PAS) ──
+async function loadRAS() {
+  const now = new Date();
+  const mois = now.getMonth() || 12;
+  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const data = await api.get('/api/declarations/ras?annee='+annee+'&mois='+mois);
+  if (!data) return;
+  const tbody = document.querySelector('#p-ras table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.employes||data.detail||[]).map(e =>
+    `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.net_imposable||0)}</td>
+    <td class="tr">${(e.taux_pas||0).toFixed(1)}%</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td></tr>`
+  ).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+  const totalEl = document.querySelector('#p-ras .mv');
+  if (totalEl) totalEl.textContent = fmtEur(data.total_pas||data.total||0);
+}
+
+// ── Budget ──
+async function loadBudget() {
+  const data = await api.get('/api/declarations/budget?annee='+new Date().getFullYear());
+  if (!data) return;
+  const tbody = document.querySelector('#p-budget table tbody');
+  if (!tbody) return;
+  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  tbody.innerHTML = (data.mois||data||[]).map(m => {
+    const ecart = (m.ca||0) - (m.depenses||0);
+    return `<tr><td>${moisNoms[m.mois]||m.mois}</td>
+    <td class="tr pos">${fmtEur(m.ca||0)}</td><td class="tr neg">${fmtEur(m.depenses||0)}</td>
+    <td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+}
+
+// ── Journal de paie ──
+async function loadJournalPaie() {
+  const now = new Date();
+  const mois = now.getMonth() || 12;
+  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const data = await api.get('/api/paie/bulletins/'+annee+'/'+mois);
+  if (!data) return;
+  const tbody = document.querySelector('#p-journal-paie table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = (data.bulletins||[]).map(b =>
+    `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(b.salaire_brut)}</td>
+    <td class="tr">${fmtEur(b.cotis_salariales||0)}</td><td class="tr">${fmtEur(b.cotis_patronales||0)}</td>
+    <td class="tr">${fmtEur(b.net_a_payer)}</td><td class="tr">${fmtEur(b.cout_employeur||0)}</td></tr>`
+  ).join('') || '<tr><td colspan="6">Aucun bulletin ce mois</td></tr>';
+  const totalEl = document.querySelector('#p-journal-paie .mv');
+  if (totalEl) totalEl.textContent = fmtEur(data.total_net||data.bulletins?.reduce((s,b)=>s+(b.net_a_payer||0),0)||0);
+}
 
 </script>
 </body>

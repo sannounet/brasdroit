@@ -45,7 +45,7 @@ def get_current_user(
     db: Session = Depends(get_db)
 ):
     """Dependency — retourne l'utilisateur connecté depuis le token JWT."""
-    from app.models.user import User
+    from app.models.models import User
     payload = decode_token(token)
     user_id: int = payload.get("sub")
     if not user_id:
