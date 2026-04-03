@@ -23,9 +23,26 @@ def seed_demo(db: Session, entreprise_id: int):
     if not entreprise:
         raise ValueError(f"Entreprise {eid} introuvable")
 
+    # Nettoyer les données existantes pour cette entreprise
+    pfx = f"E{eid}-"
+    db.query(MouvementBancaire).filter(MouvementBancaire.entreprise_id == eid).delete()
+    db.query(Ecriture).filter(Ecriture.entreprise_id == eid).delete()
+    db.query(Declaration).filter(Declaration.entreprise_id == eid).delete()
+    db.query(BulletinPaie).filter(BulletinPaie.entreprise_id == eid).delete()
+    db.query(BonCommande).filter(BonCommande.entreprise_id == eid).delete()
+    from app.models.models import Relance
+    for f in db.query(Facture).filter(Facture.entreprise_id == eid).all():
+        db.query(Relance).filter(Relance.facture_id == f.id).delete()
+    db.query(Facture).filter(Facture.entreprise_id == eid).delete()
+    db.query(Employe).filter(Employe.entreprise_id == eid).delete()
+    db.query(Fournisseur).filter(Fournisseur.entreprise_id == eid).delete()
+    db.query(Client).filter(Client.entreprise_id == eid).delete()
+    db.query(CompteComptable).filter(CompteComptable.entreprise_id == eid).delete()
+    db.flush()
+
     # Mettre à jour les infos entreprise
-    entreprise.siret = "92345678900014"
-    entreprise.siren = "923456789"
+    entreprise.siret = f"9234567890{eid:04d}"
+    entreprise.siren = f"92345{eid:04d}"
     entreprise.tva_intra = "FR56923456789"
     entreprise.adresse = "12 rue des Vignes"
     entreprise.code_postal = "33000"
@@ -54,8 +71,10 @@ def seed_demo(db: Session, entreprise_id: int):
          "adresse": "17 cours Xavier Arnozan", "code_postal": "33000", "ville": "Bordeaux", "telephone": "05 56 79 64 00", "delai_paiement": 45},
     ]
     clients = []
-    for c in clients_data:
-        client = Client(entreprise_id=eid, **c)
+    for i, c in enumerate(clients_data):
+        c_copy = dict(c)
+        c_copy["siret"] = f"{eid:02d}{c['siret'][2:]}" if c.get("siret") else None
+        client = Client(entreprise_id=eid, **c_copy)
         db.add(client)
         clients.append(client)
     db.flush()
@@ -169,7 +188,7 @@ def seed_demo(db: Session, entreprise_id: int):
         f = Facture(
             entreprise_id=eid,
             client_id=clients[fd["client_idx"]].id,
-            numero=fd["numero"],
+            numero=f"{pfx}{fd['numero']}",
             objet=fd["objet"],
             montant_ht=fd["montant_ht"],
             taux_tva=20.0,
@@ -236,7 +255,7 @@ def seed_demo(db: Session, entreprise_id: int):
         f = Facture(
             entreprise_id=eid,
             client_id=clients[fd["client_idx"]].id,
-            numero=fd["numero"],
+            numero=f"{pfx}{fd['numero']}",
             objet=fd["objet"],
             montant_ht=fd["montant_ht"],
             taux_tva=20.0,
@@ -265,7 +284,7 @@ def seed_demo(db: Session, entreprise_id: int):
         bc = BonCommande(
             entreprise_id=eid,
             client_id=clients[bc_data["client_idx"]].id,
-            numero=bc_data["numero"],
+            numero=f"{pfx}{bc_data['numero']}",
             objet=bc_data["objet"],
             montant_ht=bc_data["montant_ht"],
             taux_tva=20.0,
