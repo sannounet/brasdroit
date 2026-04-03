@@ -79,3 +79,19 @@ def debug_db():
         return {"db": "ok", "tables": [t[0] for t in tables]}
     except Exception as e:
         return {"db": "error", "detail": str(e)}
+
+
+@app.post("/debug/seed")
+def run_seed(entreprise_id: int = 1):
+    """Peuple la base avec des données de démo — À SUPPRIMER en production."""
+    from app.core.database import SessionLocal
+    from app.seed_demo import seed_demo
+    db = SessionLocal()
+    try:
+        result = seed_demo(db, entreprise_id)
+        return {"status": "ok", "inserted": result}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "detail": str(e)}
+    finally:
+        db.close()
