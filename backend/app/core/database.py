@@ -6,8 +6,8 @@ from app.core.config import settings
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,       # Vérifie la connexion avant chaque requête
-    pool_size=10,             # Connexions simultanées
-    max_overflow=20,
+    pool_size=5,              # Adapté au plan gratuit Render
+    max_overflow=5,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
