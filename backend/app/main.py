@@ -97,14 +97,20 @@ def debug_db():
 
 
 @app.post("/debug/seed")
-def run_seed(entreprise_id: int = 1):
+def run_seed(entreprise_id: int = 0):
     """Peuple la base avec des données de démo — À SUPPRIMER en production."""
+    from sqlalchemy import text
     from app.core.database import SessionLocal
     from app.seed_demo import seed_demo
     db = SessionLocal()
     try:
+        if entreprise_id == 0:
+            row = db.execute(text("SELECT id, nom FROM entreprises LIMIT 1")).fetchone()
+            if not row:
+                return {"status": "error", "detail": "Aucune entreprise trouvée. Créez un compte d'abord."}
+            entreprise_id = row[0]
         result = seed_demo(db, entreprise_id)
-        return {"status": "ok", "inserted": result}
+        return {"status": "ok", "entreprise_id": entreprise_id, "inserted": result}
     except Exception as e:
         db.rollback()
         return {"status": "error", "detail": str(e)}
