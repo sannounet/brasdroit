@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bras Droit — Gestion integree</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F4F8;--s:#1E293B;--s2:#fff;--s3:#F8FAFC;--s4:#E2E8F0;
+  --t:#0F172A;--t2:#475569;--t3:#94A3B8;
+  --b:#2563EB;--bb:#EFF6FF;--bt:#1D4ED8;
+  --g:#16A34A;--gb:#F0FDF4;--gt:#15803D;
+  --r:#DC2626;--rb:#FEF2F2;--rt:#B91C1C;
+  --a:#D97706;--ab:#FFFBEB;--at:#B45309;
+  --p:#7C3AED;--pb:#F5F3FF;--pt:#6D28D9;
+  --rad:10px;--rad2:14px;
+  --sh:0 1px 3px rgba(0,0,0,.08);
+  --sh2:0 4px 16px rgba(0,0,0,.12);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--t);font-size:13.5px;line-height:1.5;overflow-x:hidden}
+.app{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sb{width:220px;min-width:220px;background:var(--s);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:200}
+.sb::-webkit-scrollbar{width:3px}
+.sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+.logo{padding:1.1rem 1rem;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo-r{display:flex;align-items:center;gap:9px;margin-bottom:2px}
+.logo-ic{width:34px;height:34px;background:var(--b);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;box-shadow:0 2px 8px rgba(37,99,235,.4)}
+.logo-n{font-size:16px;font-weight:800;color:#fff}
+.logo-s{font-size:10.5px;color:rgba(255,255,255,.45);padding-left:43px}
+.ns{padding:.5rem .6rem .1rem}
+.nl{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.35);padding:.3rem .6rem;letter-spacing:.1em;text-transform:uppercase}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12.5px;color:rgba(255,255,255,.6);margin-bottom:2px;transition:all .12s;user-select:none}
+.ni:hover{background:rgba(255,255,255,.08);color:#fff}
+.ni.active{background:var(--b);color:#fff;font-weight:600;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+.ni-ic{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.nb{background:var(--r);color:#fff;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto}
+.nb-b{background:var(--b);color:#fff;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:auto}
+.sf{margin-top:auto;padding:.875rem 1rem;border-top:1px solid rgba(255,255,255,.1)}
+.sf-c{font-weight:700;font-size:12px;color:#fff}
+.sf-p{color:rgba(255,255,255,.4);font-size:11px;margin-bottom:5px}
+
+/* MAIN */
+.main{flex:1;margin-left:220px}
+.topbar{background:var(--s2);border-bottom:1px solid var(--s4);padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.tb-l{display:flex;align-items:center;gap:10px}
+.pt{font-size:15px;font-weight:700}
+.ps{font-size:11.5px;color:var(--t3);margin-left:8px}
+.tb-r{display:flex;gap:6px;align-items:center}
+.sel{padding:6px 10px;border:1px solid var(--s4);border-radius:var(--rad);font-size:12px;background:var(--s2);color:var(--t);cursor:pointer}
+.content{padding:1.25rem 1.5rem}
+.panel{display:none}
+.panel.active{display:block}
+
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:var(--rad);font-size:12.5px;cursor:pointer;border:1px solid var(--s4);background:var(--s2);color:var(--t);font-weight:500;display:inline-flex;align-items:center;gap:5px;transition:all .12s;white-space:nowrap}
+.btn:hover{background:var(--s3)}
+.btn-p{background:var(--b);color:#fff;border-color:var(--b)}
+.btn-p:hover{background:var(--bt)}
+.btn-d{background:var(--r);color:#fff;border-color:var(--r);padding:5px 12px;font-size:12px}
+.btn-s{background:var(--g);color:#fff;border-color:var(--g);padding:5px 12px;font-size:12px}
+.btn-w{background:var(--a);color:#fff;border-color:var(--a);padding:5px 12px;font-size:12px}
+.btn-sm{font-size:12px;padding:5px 12px}
+.btn-pu{background:var(--p);color:#fff;border-color:var(--p);padding:5px 12px;font-size:12px}
+
+/* CARDS */
+.card{background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad2);padding:1.1rem 1.2rem;margin-bottom:.875rem;box-shadow:var(--sh)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.ct{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em}
+
+/* METRICS */
+.mg{display:grid;gap:10px;margin-bottom:1rem}
+.mg4{grid-template-columns:repeat(4,1fr)}
+.mg3{grid-template-columns:repeat(3,1fr)}
+.mc{background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad2);padding:.9rem 1rem;box-shadow:var(--sh);transition:transform .15s,box-shadow .15s}
+.mc:hover{transform:translateY(-1px);box-shadow:var(--sh2)}
+.ml{font-size:11px;color:var(--t3);margin-bottom:3px;font-weight:500}
+.mv{font-size:22px;font-weight:800;line-height:1.2}
+.mt{font-size:11px;margin-top:3px}
+.up{color:var(--gt)}.down{color:var(--rt)}.neu{color:var(--t3)}
+.mbar{height:4px;background:var(--s4);border-radius:2px;margin-top:8px;overflow:hidden}
+.mbf{height:100%;border-radius:2px;transition:width .5s}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.875rem;margin-bottom:.875rem}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.875rem;margin-bottom:.875rem}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10.5px;font-weight:700;color:var(--t2);padding:6px 9px;text-transform:uppercase;letter-spacing:.05em;border-bottom:2px solid var(--s4);background:var(--s3);white-space:nowrap}
+td{padding:8px 9px;border-bottom:1px solid var(--s4);color:var(--t);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s3)}
+.tr{text-align:right;font-variant-numeric:tabular-nums}
+.mono{font-family:monospace;font-size:12px;color:var(--t2)}
+.pos{color:var(--gt);font-weight:600}
+.neg{color:var(--rt);font-weight:600}
+.sr td{background:var(--s4);font-weight:700;font-size:11px;text-transform:uppercase;color:var(--t2)}
+.totr td{background:var(--bb);font-weight:700;border-top:2px solid var(--b);color:var(--bt)}
+.subr td{font-weight:600;border-top:1px solid var(--s4);background:var(--s3)}
+.i1 td:first-child{padding-left:22px}
+
+/* FLAGS */
+.fd,.fw,.fs,.fi,.fp{padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;border-radius:0 var(--rad) var(--rad) 0}
+.fd{background:var(--rb);border-left:3px solid var(--r)}
+.fw{background:var(--ab);border-left:3px solid var(--a)}
+.fs{background:var(--gb);border-left:3px solid var(--g)}
+.fi{background:var(--bb);border-left:3px solid var(--b)}
+.fp{background:var(--pb);border-left:3px solid var(--p)}
+.fic{font-size:14px;min-width:16px;margin-top:1px;flex-shrink:0}
+.fb{flex:1}
+.ftt{font-size:13px;font-weight:600;color:var(--t)}
+.fdesc{font-size:12px;color:var(--t2);margin-top:2px}
+.fa{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.tg{background:var(--gb);color:var(--gt)}
+.tr2{background:var(--rb);color:var(--rt)}
+.tw2{background:var(--ab);color:var(--at)}
+.tb2{background:var(--bb);color:var(--bt)}
+.tgy{background:var(--s4);color:var(--t2)}
+.tp{background:var(--pb);color:var(--pt)}
+.ai{display:inline-flex;align-items:center;gap:3px;background:var(--pb);color:var(--pt);font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+
+/* INPUTS */
+.ei{background:transparent;border:none;border-bottom:1px dashed var(--s4);font-size:12.5px;color:var(--t);font-family:inherit;padding:1px 3px;width:100%}
+.ei:focus{outline:none;border-bottom-color:var(--b)}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:7px 10px;font-size:12.5px;border:1px solid var(--s4);border-radius:var(--rad);background:var(--s2);color:var(--t);font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--b);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+input[type=range]{width:100%;cursor:pointer;accent-color:var(--b)}
+input[type=number]{-moz-appearance:textfield}
+
+/* TOGGLE */
+.tog{width:34px;height:19px;border-radius:10px;background:var(--s4);cursor:pointer;position:relative;border:none;display:inline-block;vertical-align:middle;transition:background .15s}
+.tog.on{background:var(--g)}
+.togk{width:15px;height:15px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tog.on .togk{left:17px}
+
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--s4);margin-bottom:1rem;overflow-x:auto}
+.tab{padding:8px 16px;font-size:12.5px;cursor:pointer;color:var(--t2);border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:500;white-space:nowrap;transition:all .12s}
+.tab:hover{color:var(--t);background:var(--s3)}
+.tab.active{color:var(--b);border-bottom-color:var(--b);font-weight:700}
+.tc{display:none}
+.tc.active{display:block}
+
+/* TIMELINE */
+.tl{display:flex;flex-direction:column}
+.tli{display:flex;gap:10px;padding-bottom:14px;position:relative}
+.tli::before{content:'';position:absolute;left:4px;top:12px;bottom:0;width:1px;background:var(--s4)}
+.tli:last-child::before{display:none}
+.tld{width:10px;height:10px;border-radius:50%;border:2px solid var(--s4);background:var(--s2);margin-top:3px;flex-shrink:0;z-index:1;position:relative}
+.tld.done{background:var(--g);border-color:var(--g)}
+.tld.warn{background:var(--r);border-color:var(--r)}
+.tlc{flex:1}
+.tll{font-size:12.5px;font-weight:600}
+.tls{font-size:11px;color:var(--t2)}
+
+/* AVATAR */
+.av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.avb{background:var(--bb);color:var(--bt)}
+.avg{background:var(--gb);color:var(--gt)}
+.ava{background:var(--ab);color:var(--at)}
+.avp{background:var(--pb);color:var(--pt)}
+
+/* MISC */
+.rb{height:5px;background:var(--s4);border-radius:3px;margin-top:6px;overflow:hidden}
+.rbf{height:100%;border-radius:3px}
+.stat{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--s4);font-size:12.5px}
+.stat:last-child{border-bottom:none}
+.sl{color:var(--t2)}
+.sv{font-weight:600}
+.dli{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rad);border:1px solid var(--s4);margin-bottom:6px;background:var(--s2);box-shadow:var(--sh)}
+.dl-urg{border-left:3px solid var(--r)!important;background:var(--rb)!important}
+.dl-soon{border-left:3px solid var(--a)!important;background:var(--ab)!important}
+.dl-ok{border-left:3px solid var(--g)!important}
+.dld{font-size:11px;font-weight:700;min-width:36px}
+.dli-n{font-size:12.5px;font-weight:600}
+.dli-s{font-size:11px;color:var(--t2)}
+.ec{display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--rad);border:1px solid var(--s4);cursor:pointer;margin-bottom:6px;background:var(--s2);transition:all .12s;box-shadow:var(--sh)}
+.ec:hover{background:var(--bb);border-color:var(--b)}
+.pr{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--s4)}
+.prl{flex:1;font-size:12.5px}
+.prs{font-size:11px;color:var(--t2)}
+.rr{display:grid;grid-template-columns:26px 1fr 80px 60px 80px 60px 36px;gap:4px;align-items:center;padding:6px 0;border-bottom:1px solid var(--s4);font-size:11.5px}
+.rh{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;padding:4px 0 6px;border-bottom:2px solid var(--s4);background:var(--s3)}
+.ocrf{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--s4);font-size:12.5px}
+.ocrf:last-child{border-bottom:none}
+.ocrk{color:var(--t2)}
+.ocrv{font-weight:600}
+.er{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--s4);font-size:12px;font-family:monospace}
+.er:last-child{border-bottom:none}
+.flr{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--s4)}
+.fln{flex:1;font-size:12.5px}
+.flb{width:150px;height:7px;background:var(--s4);border-radius:4px;overflow:hidden}
+.flbf{height:100%;border-radius:4px}
+.flv{min-width:90px;text-align:right;font-size:12.5px;font-weight:600}
+.upz{border:2px dashed var(--s4);border-radius:var(--rad2);padding:1.5rem;text-align:center;cursor:pointer;transition:all .15s}
+.upz:hover{background:var(--bb);border-color:var(--b)}
+.lf{display:grid;grid-template-columns:34px 1fr 105px 105px;gap:5px;padding:6px 0;border-bottom:1px solid var(--s4);font-size:11.5px;align-items:center}
+.lh{font-weight:700;color:var(--t2);font-size:10px;text-transform:uppercase;background:var(--s3);padding:4px 0}
+.ls{background:var(--s4);font-weight:700;font-size:10.5px;text-transform:uppercase;color:var(--t2)}
+.li{padding:3px 7px;border:1px solid var(--s4);border-radius:5px;font-size:11.5px;text-align:right;width:100%;background:var(--s2);color:var(--t);font-family:monospace}
+.li.auto{background:var(--gb);color:var(--gt);border-color:#B2F2BB}
+.li.flag{background:var(--rb);border-color:#FEB2B2}
+.amr{display:grid;grid-template-columns:2fr 78px 78px 78px 65px 90px;gap:7px;padding:6px 0;border-bottom:1px solid var(--s4);font-size:11.5px;align-items:center}
+.amh{font-weight:700;color:var(--t2);font-size:10.5px;text-transform:uppercase;background:var(--s3);padding:5px 0}
+.barchart{display:flex;align-items:flex-end;gap:5px;height:130px;margin:.75rem 0 .5rem}
+.bc{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}
+.bs{width:100%;border-radius:4px 4px 0 0;min-height:2px}
+.bl{font-size:9.5px;color:var(--t3);text-align:center;margin-top:2px}
+.rc{background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad2);padding:.9rem;box-shadow:var(--sh)}
+.rcn{font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.rcv{font-size:22px;font-weight:800;margin-bottom:2px}
+.rcb{font-size:11px;color:var(--t3)}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:.875rem}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.mo.open{display:flex}
+.modal{background:var(--s2);border-radius:var(--rad2);padding:1.5rem;width:500px;max-width:92vw;border:1px solid var(--s4);max-height:88vh;overflow-y:auto;box-shadow:var(--sh2)}
+.mh{font-size:15px;font-weight:700;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.mc2{font-size:20px;cursor:pointer;color:var(--t2)}
+.mrow{margin-bottom:.7rem}
+.mlbl{font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500}
+@media(max-width:900px){
+  .sb{width:52px;min-width:52px}
+  .logo-n,.logo-s,.nl,.nb,.nb-b,.sf-c,.sf-p span,.ni span:not(.ni-ic){display:none}
+  .ni{justify-content:center;padding:8px 5px}
+  .main{margin-left:52px}
+  .mg4{grid-template-columns:1fr 1fr}
+  .g2,.g3{grid-template-columns:1fr}
+  .rgrid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="sb">
+  <div class="logo">
+    <div class="logo-r"><div class="logo-ic">BD</div><div class="logo-n">Bras Droit</div></div>
+    <div class="logo-s">Logiciel de gestion integree</div>
+  </div>
+  <div class="ns"><div class="nl">Principal</div>
+    <div class="ni active" onclick="go('dashboard')"><div class="ni-ic">&#9638;</div>Tableau de bord</div>
+    <div class="ni" onclick="go('alertes')"><div class="ni-ic">&#9888;</div>Alertes de gestion<span class="nb">8</span></div>
+    <div class="ni" onclick="go('encaiss')"><div class="ni-ic">&#8644;</div>Encaiss. / Decaiss.</div>
+  </div>
+  <div class="ns"><div class="nl">Comptabilite</div>
+    <div class="ni" onclick="go('ocr')"><div class="ni-ic">&#9654;</div>Saisie OCR IA</div>
+    <div class="ni" onclick="go('journal')"><div class="ni-ic">&#9998;</div>Journal Red Flags<span class="nb">7</span></div>
+    <div class="ni" onclick="go('lettrage')"><div class="ni-ic">&#8644;</div>Lettrage bancaire</div>
+    <div class="ni" onclick="go('plan')"><div class="ni-ic">&#9783;</div>Plan de comptes</div>
+  </div>
+  <div class="ns"><div class="nl">Facturation</div>
+    <div class="ni" onclick="go('bdc')"><div class="ni-ic">&#9632;</div>Bons de commande</div>
+    <div class="ni" onclick="go('factures')"><div class="ni-ic">&#9654;</div>Factures electroniques</div>
+    <div class="ni" onclick="go('recovery')"><div class="ni-ic">&#9889;</div>Recouvrement amiable<span class="nb">5</span></div>
+    <div class="ni" onclick="go('judicial')"><div class="ni-ic">&#9878;</div>Judiciaire + LR</div>
+  </div>
+  <div class="ns"><div class="nl">RH et Paie</div>
+    <div class="ni" onclick="go('employes')"><div class="ni-ic">&#9824;</div>Dossiers employes</div>
+    <div class="ni" onclick="go('paie-params')"><div class="ni-ic">&#9881;</div>Parametrage paie</div>
+    <div class="ni" onclick="go('rubriques')"><div class="ni-ic">&#8801;</div>Rubriques</div>
+    <div class="ni" onclick="go('bulletin')"><div class="ni-ic">&#9654;</div>Bulletin IA</div>
+    <div class="ni" onclick="go('charges')"><div class="ni-ic">&#9685;</div>Charges patronales</div>
+    <div class="ni" onclick="go('dsn')"><div class="ni-ic">&#9993;</div>DSN</div>
+    <div class="ni" onclick="go('journal-paie')"><div class="ni-ic">&#9998;</div>Journal de paie</div>
+    <div class="ni" onclick="go('ras')"><div class="ni-ic">&#9654;</div>Retenues a la source</div>
+  </div>
+  <div class="ns"><div class="nl">Declarations</div>
+    <div class="ni" onclick="go('decl-tva')"><div class="ni-ic">%</div>TVA CA3<span class="nb">!</span></div>
+    <div class="ni" onclick="go('decl-is')"><div class="ni-ic">&#9632;</div>Impots IS + CIR</div>
+    <div class="ni" onclick="go('decl-urssaf')"><div class="ni-ic">&#9993;</div>URSSAF</div>
+    <div class="ni" onclick="go('liasse')"><div class="ni-ic">&#9998;</div>Liasse fiscale<span class="nb-b">2050</span></div>
+  </div>
+  <div class="ns"><div class="nl">Previsions</div>
+    <div class="ni" onclick="go('budget')"><div class="ni-ic">&#9671;</div>Budget</div>
+    <div class="ni" onclick="go('ecarts')"><div class="ni-ic">&#9650;</div>Ecarts + IA</div>
+    <div class="ni" onclick="go('optim')"><div class="ni-ic">&#10022;</div>Optimisation IA</div>
+  </div>
+  <div class="ns"><div class="nl">Tresorerie</div>
+    <div class="ni" onclick="go('treso')"><div class="ni-ic">&#8644;</div>Temps reel</div>
+    <div class="ni" onclick="go('releves')"><div class="ni-ic">&#9783;</div>Releves bancaires</div>
+    <div class="ni" onclick="go('prev-treso')"><div class="ni-ic">&#9650;</div>Prevision tresorerie</div>
+  </div>
+  <div class="ns"><div class="nl">Etats financiers</div>
+    <div class="ni" onclick="go('bilan')"><div class="ni-ic">&#8863;</div>Bilan comptable</div>
+    <div class="ni" onclick="go('resultat')"><div class="ni-ic">&#8801;</div>Compte de resultat</div>
+    <div class="ni" onclick="go('ratios')"><div class="ni-ic">&#9678;</div>Ratios financiers<span class="nb">3</span></div>
+  </div>
+  <div class="sf">
+    <div class="sf-c">Mon Entreprise</div>
+    <div class="sf-p">Exercice 2026 &middot; PCG</div>
+    <div style="margin-top:4px"><span class="ai">&#10022; IA active</span></div>
+  </div>
+</div>
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="p-dashboard" class="panel active">
+<div class="topbar"><div class="tb-l"><div class="pt">Tableau de bord</div><div class="ps">Avril 2026 &middot; Donnees en temps reel</div></div>
+<div class="tb-r"><select class="sel"><option>Ce mois</option><option>Cette semaine</option><option>Ce trimestre</option></select><button class="btn btn-p">&#8681; Exporter</button><button class="btn" onclick="logout()" style="margin-left:6px">&#8594; Deconnexion</button></div></div>
+<div class="content">
+<div class="fd"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">8 alertes urgentes &mdash; action requise aujourd'hui</div><div class="fdesc">TVA CA3 (05/04 &middot; 7 880&euro;) &middot; URSSAF (31/03 &middot; 3 240&euro;) &middot; DSN (05/04) &middot; Fournisseur Legrand (J-2) &middot; Impaye Andorno (17 040&euro;)</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button><button class="btn btn-sm" onclick="go('decl-tva')">Preparer TVA</button></div></div></div>
+<div class="mg mg4">
+<div class="mc"><div class="ml">CA ce mois</div><div class="mv" style="color:var(--b)" id="dash-ca">48 240 &euro;</div><div class="mt up">&#8593; +12% vs mars</div><div class="mbar"><div class="mbf" style="width:72%;background:var(--b)"></div></div></div>
+<div class="mc"><div class="ml">Tresorerie banque</div><div class="mv" style="color:var(--g)" id="dash-treso">42 300 &euro;</div><div class="mt neu">Temps reel BNP</div><div class="mbar"><div class="mbf" style="width:60%;background:var(--g)"></div></div></div>
+<div class="mc"><div class="ml">Impayes en cours</div><div class="mv" style="color:var(--r)" id="dash-impayes">23 800 &euro;</div><div class="mt down">5 dossiers actifs</div><div class="mbar"><div class="mbf" style="width:50%;background:var(--r)"></div></div></div>
+<div class="mc"><div class="ml">A payer ce mois</div><div class="mv" style="color:var(--a)">19 597 &euro;</div><div class="mt down">TVA + URSSAF + IS</div><div class="mbar"><div class="mbf" style="width:75%;background:var(--a)"></div></div></div>
+</div>
+<div class="g2">
+<div class="card"><div class="ch"><div class="ct">CA mensuel 6 mois</div><span class="ai">&#10022; IA</span></div>
+<div class="barchart">
+<div class="bc"><div class="bs" style="height:55%;background:#BFDBFE"></div><div class="bl">Nov</div></div>
+<div class="bc"><div class="bs" style="height:62%;background:#BFDBFE"></div><div class="bl">Dec</div></div>
+<div class="bc"><div class="bs" style="height:50%;background:#BFDBFE"></div><div class="bl">Jan</div></div>
+<div class="bc"><div class="bs" style="height:68%;background:#BFDBFE"></div><div class="bl">Fev</div></div>
+<div class="bc"><div class="bs" style="height:75%;background:#BFDBFE"></div><div class="bl">Mar</div></div>
+<div class="bc"><div class="bs" style="height:90%;background:var(--b)"></div><div class="bl">Avr</div></div>
+</div>
+<div style="display:flex;justify-content:space-around;font-size:10.5px;color:var(--t3);margin-top:2px"><span>28k</span><span>33k</span><span>26k</span><span>36k</span><span>40k</span><span style="color:var(--b);font-weight:700">48k</span></div>
+</div>
+<div class="card"><div class="ch"><div class="ct">Repartition charges</div></div>
+<div style="display:flex;flex-direction:column;gap:9px;margin-top:.25rem">
+<div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Masse salariale</span><span style="font-weight:600">40% &middot; 12 400&euro;</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:40%;height:100%;background:var(--b);border-radius:4px"></div></div></div>
+<div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Charges sociales</span><span style="font-weight:600">25% &middot; 7 750&euro;</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:25%;height:100%;background:var(--a);border-radius:4px"></div></div></div>
+<div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Fournisseurs</span><span style="font-weight:600">22% &middot; 6 820&euro;</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:22%;height:100%;background:var(--p);border-radius:4px"></div></div></div>
+<div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Frais generaux</span><span style="font-weight:600">13% &middot; 4 030&euro;</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:13%;height:100%;background:var(--g);border-radius:4px"></div></div></div>
+</div></div>
+</div>
+<div class="g3">
+<div class="card"><div class="ct" style="margin-bottom:.6rem">Score sante financiere</div>
+<div style="text-align:center;padding:.5rem 0"><div style="font-size:42px;font-weight:800;color:var(--a)">68<span style="font-size:20px;color:var(--t3)">/100</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:4px">Score moyen &mdash; 3 points a corriger</div></div>
+<div style="display:flex;flex-direction:column;gap:5px;margin-top:.5rem">
+<div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Liquidite</span><span style="color:var(--r);font-weight:600">45/25</span></div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Rentabilite</span><span style="color:var(--b);font-weight:600">72/25</span></div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Endettement</span><span style="color:var(--a);font-weight:600">60/25</span></div>
+<div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Cycle exploitation</span><span style="color:var(--r);font-weight:600">40/25</span></div>
+</div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.6rem">Prochaines echeances</div>
+<div class="dli dl-urg"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">TVA CA3 mars</div><div class="dli-s">7 880 &euro; &middot; 05/04</div></div></div>
+<div class="dli dl-urg"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">URSSAF + DSN</div><div class="dli-s">3 240 &euro; &middot; 05/04</div></div></div>
+<div class="dli dl-soon"><div class="dld" style="color:var(--at)">J-12</div><div style="flex:1"><div class="dli-n">IS acompte T1</div><div class="dli-s">4 800 &euro; &middot; 15/04</div></div></div>
+<div class="dli dl-ok"><div class="dld" style="color:var(--gt)">J-27</div><div style="flex:1"><div class="dli-n">Schneider Electric</div><div class="dli-s">8 900 &euro; &middot; 30/04</div></div></div>
+<button class="btn" style="width:100%;margin-top:.5rem" onclick="go('alertes')">Toutes les echeances &rarr;</button>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.6rem">Suggestions IA</div>
+<div class="fi" style="margin-bottom:7px"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Reduction Fillon non activee</div><div class="fdesc">Economie: 1 840&euro;/mois</div></div></div>
+<div class="fw" style="margin-bottom:7px"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">DSO 81j &mdash; objectif 45j</div><div class="fdesc">+18 200&euro; tresorerie potentiel</div></div></div>
+<div class="fs"><div class="fic">&#10003;</div><div class="fb"><div class="ftt">CIR 2026 estimé 7 200&euro;</div><div class="fdesc">Dossier a preparer avant mai</div></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ALERTES -->
+<div id="p-alertes" class="panel">
+<div class="topbar"><div class="tb-l"><div class="pt">Alertes de gestion</div><div class="ps">8 urgentes &middot; 12 importantes</div></div>
+<div class="tb-r"><select class="sel"><option>Toutes</option><option>Fiscales</option><option>Sociales</option><option>Fournisseurs</option><option>RH</option></select></div></div>
+<div class="content">
+<div class="g3">
+<div style="text-align:center;padding:.875rem;background:var(--rb);border-radius:var(--rad2);border:1px solid #FEB2B2"><div style="font-size:28px;font-weight:800;color:var(--r)">8</div><div style="font-size:11.5px;color:var(--rt);font-weight:600">URGENTES</div><div style="font-size:11px;color:var(--t2)">A traiter aujourd'hui</div></div>
+<div style="text-align:center;padding:.875rem;background:var(--ab);border-radius:var(--rad2);border:1px solid #FFD43B"><div style="font-size:28px;font-weight:800;color:var(--a)">12</div><div style="font-size:11.5px;color:var(--at);font-weight:600">IMPORTANTES</div><div style="font-size:11px;color:var(--t2)">Dans les 15 jours</div></div>
+<div style="text-align:center;padding:.875rem;background:var(--gb);border-radius:var(--rad2);border:1px solid #B2F2BB"><div style="font-size:28px;font-weight:800;color:var(--g)">6</div><div style="font-size:11.5px;color:var(--gt);font-weight:600">INFORMATIONS</div><div style="font-size:11px;color:var(--t2)">Dans les 30 jours</div></div>
+</div>
+<div class="card"><div id="alertes-list" style="display:none"></div><div class="ct" style="margin-bottom:.75rem">&#128308; Alertes urgentes &mdash; a traiter aujourd'hui</div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">TVA CA3 mars &mdash; Net a payer 7 880 &euro;</div><div class="dli-s">Teledeclaration EDI avant le 05/04/2026</div></div><button class="btn btn-sm btn-d" onclick="go('decl-tva')">Traiter &rarr;</button></div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">URSSAF cotisations mars &mdash; 3 240 &euro;</div><div class="dli-s">Prelevement automatique BNP le 31/03</div></div><button class="btn btn-sm btn-d" onclick="go('decl-urssaf')">Verifier &rarr;</button></div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">DSN mars &mdash; 4 employes</div><div class="dli-s">Transmission Net-Entreprises avant 05/04</div></div><button class="btn btn-sm btn-d" onclick="go('dsn')">Transmettre &rarr;</button></div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">RAS PAS mars &mdash; 861 &euro;</div><div class="dli-s">Versement DGFIP avant le 05/04</div></div><button class="btn btn-sm btn-d" onclick="go('ras')">Payer &rarr;</button></div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J-2</div><div style="flex:1"><div class="dli-n">Fournisseur Legrand &mdash; 2 450 &euro;</div><div class="dli-s">Facture F2026-0314 &middot; Echeance 05/04</div></div><button class="btn btn-sm btn-d">Payer &rarr;</button></div>
+<div class="dli dl-urg" style="margin-bottom:8px"><div class="dld" style="color:var(--rt)">J+8</div><div style="flex:1"><div class="dli-n">Impaye Andorno Francois &mdash; 17 040 &euro;</div><div class="dli-s">Facture F2026-0040 &middot; Relance R1 envoyee</div></div><button class="btn btn-sm btn-d" onclick="go('recovery')">Dossier &rarr;</button></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">&#128992; Alertes importantes &mdash; 15 jours</div>
+<div class="dli dl-soon" style="margin-bottom:8px"><div class="dld" style="color:var(--at)">J-12</div><div style="flex:1"><div class="dli-n">IS acompte T1 &mdash; 4 800 &euro;</div><div class="dli-s">Echeance 15/04/2026</div></div><button class="btn btn-sm btn-w" onclick="go('decl-is')">Preparer</button></div>
+<div class="dli dl-soon" style="margin-bottom:8px"><div class="dld" style="color:var(--at)">J-27</div><div style="flex:1"><div class="dli-n">Schneider Electric &mdash; 8 900 &euro;</div><div class="dli-s">Echeance 30/04</div></div><button class="btn btn-sm btn-w">Programmer</button></div>
+<div class="dli dl-soon" style="margin-bottom:8px"><div class="dld" style="color:var(--at)">J-27</div><div style="flex:1"><div class="dli-n">Mutuelle Malakoff &mdash; 680 &euro;</div><div class="dli-s">Prelevement 30/04</div></div><span class="tag tw2">Auto</span></div>
+<div class="dli dl-soon" style="margin-bottom:8px"><div class="dld" style="color:var(--at)">J-27</div><div style="flex:1"><div class="dli-n">URSSAF + DSN avril</div><div class="dli-s">A preparer avant le 05/05</div></div><button class="btn btn-sm btn-w" onclick="go('dsn')">Preparer</button></div>
+</div>
+</div>
+</div>
+
+<!-- ENCAISSEMENTS / DECAISSEMENTS -->
+<div id="p-encaiss" class="panel">
+<div class="topbar"><div class="tb-l"><div class="pt">Encaissements / Decaissements</div></div>
+<div class="tb-r"><select class="sel" id="encaiss-mode" onchange="renderEncaiss()"><option value="m">Vue mensuelle</option><option value="w">Vue hebdomadaire</option></select><button class="btn btn-p">Export PDF</button></div></div>
+<div class="content">
+<div class="mg mg4">
+<div class="mc"><div class="ml">Encaissements realises</div><div class="mv pos">27 600 &euro;</div></div>
+<div class="mc"><div class="ml">Encaissements attendus</div><div class="mv" style="color:var(--b)">28 640 &euro;</div></div>
+<div class="mc"><div class="ml">Decaissements realises</div><div class="mv neg">3 990 &euro;</div></div>
+<div class="mc"><div class="ml">Decaissements prevus</div><div class="mv" style="color:var(--a)">42 297 &euro;</div></div>
+</div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Encaissements &mdash; Avril 2026</div>
+<table><thead><tr><th>Date</th><th>Client</th><th>Facture</th><th class="tr">Montant</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>01/04</td><td>Client 1</td><td class="mono">F2026-0042</td><td class="tr pos">9 600 &euro;</td><td><span class="tag tg">&#10003; Recu</span></td></tr>
+<tr><td>05/04</td><td>Client 2</td><td class="mono">F2026-0041</td><td class="tr pos">6 000 &euro;</td><td><span class="tag tg">&#10003; Recu</span></td></tr>
+<tr style="background:var(--ab)"><td>15/04</td><td>Andorno Francois</td><td class="mono">F2026-0040</td><td class="tr" style="color:var(--a)">17 040 &euro;</td><td><span class="tag tw2">&#9203; Attendu</span></td></tr>
+<tr><td>20/04</td><td>EARL Martin</td><td class="mono">F2026-0035</td><td class="tr" style="color:var(--b)">3 200 &euro;</td><td><span class="tag tb2">&#9203; Prevu</span></td></tr>
+<tr><td>30/04</td><td>Domaine Aussières</td><td class="mono">F2026-0044</td><td class="tr" style="color:var(--b)">8 400 &euro;</td><td><span class="tag tb2">&#9203; Prevu</span></td></tr>
+</tbody></table>
+<div style="margin-top:.75rem;padding:.75rem;background:var(--s3);border-radius:var(--rad);display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t2)">Total encaissements avril</span><span style="font-weight:700;color:var(--g)">56 240 &euro;</span></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Decaissements &mdash; Avril 2026</div>
+<table><thead><tr><th>Date</th><th>Beneficiaire</th><th>Nature</th><th class="tr">Montant</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>01/04</td><td>BNP Paribas</td><td>Remb. pret</td><td class="tr neg">1 200 &euro;</td><td><span class="tag tg">&#10003;</span></td></tr>
+<tr><td>03/04</td><td>SFR Business</td><td>Abonnement</td><td class="tr neg">340 &euro;</td><td><span class="tag tg">&#10003;</span></td></tr>
+<tr><td>05/04</td><td>Legrand SAS</td><td>Fournisseur</td><td class="tr neg">2 450 &euro;</td><td><span class="tag tg">&#10003;</span></td></tr>
+<tr style="background:var(--rb)"><td>05/04</td><td>DGFIP</td><td>TVA CA3</td><td class="tr neg">7 880 &euro;</td><td><span class="tag tr2">URGENT</span></td></tr>
+<tr style="background:var(--rb)"><td>05/04</td><td>DGFIP</td><td>RAS PAS</td><td class="tr neg">861 &euro;</td><td><span class="tag tr2">URGENT</span></td></tr>
+<tr><td>15/04</td><td>DGFIP</td><td>IS acompte</td><td class="tr neg">4 800 &euro;</td><td><span class="tag tw2">Prevu</span></td></tr>
+<tr><td>25/04</td><td>Employes (4)</td><td>Salaires</td><td class="tr neg">12 400 &euro;</td><td><span class="tag tb2">Prevu</span></td></tr>
+<tr><td>30/04</td><td>Schneider</td><td>Fournisseur</td><td class="tr neg">8 900 &euro;</td><td><span class="tag tb2">Prevu</span></td></tr>
+</tbody></table>
+<div style="margin-top:.75rem;padding:.75rem;background:var(--s3);border-radius:var(--rad);display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t2)">Total decaissements avril</span><span style="font-weight:700;color:var(--r)">46 287 &euro;</span></div>
+</div>
+</div>
+<div class="card">
+<div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+<div><div class="ml">Solde ouverture</div><div class="mv" style="color:var(--b)">42 300 &euro;</div></div>
+<div style="font-size:20px;color:var(--t2)">+</div>
+<div><div class="ml">Encaissements</div><div class="mv pos">27 600 &euro;</div></div>
+<div style="font-size:20px;color:var(--t2)">-</div>
+<div><div class="ml">Decaissements</div><div class="mv neg">3 990 &euro;</div></div>
+<div style="font-size:20px;color:var(--t2)">=</div>
+<div><div class="ml">Solde actuel</div><div class="mv" style="color:var(--g);font-size:26px">65 910 &euro;</div></div>
+<div style="font-size:14px;color:var(--t2)">&rarr; Projete fin mois:</div>
+<div><div class="mv" style="color:var(--b);font-size:22px">52 253 &euro;</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- OCR -->
+<div id="p-ocr" class="panel">
+<div class="topbar"><div class="pt">Saisie comptable &mdash; OCR IA</div></div>
+<div class="content">
+<div class="g2">
+<div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">1. Importer une facture</div>
+<div class="upz" id="upz" onclick="doOCR()"><div style="font-size:32px;margin-bottom:8px">&#128247;</div>
+<div style="font-size:13px;color:var(--t2);margin-bottom:12px">Cliquez pour importer &middot; Photo, scan, PDF acceptes</div>
+<button class="btn btn-p">Analyser par IA &rarr;</button></div>
+<div id="ocr-loading" style="display:none;text-align:center;padding:1.5rem;color:var(--t2)"><div style="font-size:24px;margin-bottom:8px">&#9203;</div>Analyse OCR en cours...</div>
+</div>
+<div class="card" id="ocr-result" style="display:none">
+<div class="ct" style="margin-bottom:.75rem">2. Donnees extraites <span class="ai">&#10022; IA</span></div>
+<div class="ocrf"><span class="ocrk">Fournisseur</span><span class="ocrv">Legrand SAS</span></div>
+<div class="ocrf"><span class="ocrk">N&deg; facture</span><span class="ocrv">F2026-0314</span></div>
+<div class="ocrf"><span class="ocrk">Date</span><span class="ocrv">28/03/2026</span></div>
+<div class="ocrf"><span class="ocrk">Montant HT</span><span class="ocrv">2 041,67 &euro;</span></div>
+<div class="ocrf"><span class="ocrk">TVA 20%</span><span class="ocrv">408,33 &euro;</span></div>
+<div class="ocrf"><span class="ocrk">Total TTC</span><span class="ocrv" style="font-size:15px;color:var(--bt)">2 450,00 &euro;</span></div>
+<div class="ocrf"><span class="ocrk">Echeance</span><span class="ocrv">05/04/2026</span></div>
+<div class="fw" style="margin-top:8px"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">SIREN fournisseur non lisible &mdash; TVA a risque</div><div class="fdesc">Demander facture rectificative avant deduction (408,33 &euro;)</div></div></div>
+<button class="btn btn-p" style="width:100%;margin-top:.5rem" onclick="doEcriture()">Generer l'ecriture comptable &rarr;</button>
+</div>
+</div>
+<div>
+<div class="card" id="ecriture-card" style="display:none">
+<div class="ct" style="margin-bottom:.75rem">3. Ecriture generee <span class="ai">&#10022; Auto</span></div>
+<div style="background:var(--s4);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px">
+<div class="er"><span>215400</span><span>Materiel Legrand SAS</span><span class="pos">2 041,67</span><span>&mdash;</span></div>
+<div class="er"><span>445660</span><span>TVA deductible 20%</span><span class="pos">408,33</span><span>&mdash;</span></div>
+<div class="er"><span>401000</span><span>Fournisseur Legrand SAS</span><span>&mdash;</span><span class="neg">2 450,00</span></div>
+<div class="er" style="font-weight:700;border-top:1px solid var(--s4)"><span></span><span>TOTAL</span><span class="pos">2 450,00</span><span class="neg">2 450,00</span></div>
+</div>
+<div class="fd" style="margin-top:8px"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">607100 &rarr; 215400 corrige auto &mdash; immobilisation &gt;500&euro;</div><div class="fdesc">Amortissement lineaire 3 ans &middot; Dotation: 56,72&euro;/mois</div></div></div>
+<div style="display:flex;gap:6px;margin-top:.5rem">
+<button class="btn btn-s" onclick="doLettrage()">&#10003; Valider et lettrer</button>
+<button class="btn">Modifier</button>
+</div>
+<div class="fs" style="margin-top:8px;display:none" id="lettrage-ok">&#10003; Lettrage bancaire effectue &mdash; rapprochement virement 05/04</div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.6rem">Dernieres ecritures saisies</div>
+<table><thead><tr><th>Date</th><th>Compte</th><th>Libelle</th><th class="tr">Debit</th><th class="tr">Credit</th><th>IA</th></tr></thead>
+<tbody>
+<tr><td>31/03</td><td class="mono">641100</td><td>Salaires mars</td><td class="tr neg">12 400</td><td class="tr">&mdash;</td><td><span class="tag tg">OK</span></td></tr>
+<tr><td>28/03</td><td class="mono">606100</td><td>EDF Pro</td><td class="tr neg">340</td><td class="tr">&mdash;</td><td><span class="tag tg">OK</span></td></tr>
+<tr style="background:var(--rb)"><td>28/03</td><td class="mono" style="color:var(--rt)">607100</td><td>Legrand (a corriger)</td><td class="tr neg">2 042</td><td class="tr">&mdash;</td><td><span class="tag tr2">&#9888;</span></td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- JOURNAL -->
+<div id="p-journal" class="panel">
+<div class="topbar"><div class="tb-l"><div class="pt">Journal de saisie &mdash; Red Flags IA</div></div>
+<div class="tb-r"><span class="tag tr2">7 anomalies</span><button class="btn btn-p" style="margin-left:6px">+ Ecriture</button></div></div>
+<div class="content">
+<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Moteur IA actif &mdash; verification PCG, doublons, TVA, equilibre en temps reel</div></div></div>
+<div class="g3" style="margin-bottom:.875rem">
+<div style="text-align:center;padding:.75rem;background:var(--rb);border-radius:var(--rad2);border:1px solid #FEB2B2"><div style="font-size:24px;font-weight:800;color:var(--r)">3</div><div style="font-size:11px;color:var(--rt)">Critiques</div></div>
+<div style="text-align:center;padding:.75rem;background:var(--ab);border-radius:var(--rad2);border:1px solid #FFD43B"><div style="font-size:24px;font-weight:800;color:var(--a)">4</div><div style="font-size:11px;color:var(--at)">Alertes</div></div>
+<div style="text-align:center;padding:.75rem;background:var(--gb);border-radius:var(--rad2);border:1px solid #B2F2BB"><div style="font-size:24px;font-weight:800;color:var(--g)">91%</div><div style="font-size:11px;color:var(--gt)">Conformite PCG</div></div>
+</div>
+<div class="card" style="overflow-x:auto">
+<table><thead><tr><th>Date</th><th>Piece</th><th>Compte</th><th>Libelle</th><th class="tr">Debit</th><th class="tr">Credit</th><th>Lettre</th><th>IA</th></tr></thead>
+<tbody>
+<tr><td>01/04</td><td class="mono">VE-042</td><td class="mono">411000</td><td><input class="ei" value="Client 1 &mdash; F2026-0042"></td><td class="tr"><input class="ei" value="9 600" style="text-align:right;width:70px"></td><td class="tr">&mdash;</td><td><span class="tag tg">&#10003;</span></td><td><span class="tag tg">OK</span></td></tr>
+<tr style="background:var(--rb)"><td>28/03</td><td class="mono">AC-031</td><td class="mono" style="color:var(--rt)">607100</td><td><input class="ei" style="border-bottom-color:var(--r);color:var(--rt)" value="Achat materiel Legrand"></td><td class="tr"><input class="ei" style="border-bottom-color:var(--r);color:var(--rt);text-align:right;width:70px" value="2 042"></td><td class="tr">&mdash;</td><td><span class="tag tr2">&#10007;</span></td><td><span class="tag tr2" onclick="toggleEl('f607')" style="cursor:pointer">&#9876; Erreur</span></td></tr>
+<tr style="background:var(--ab)"><td>25/03</td><td class="mono">VE-040</td><td class="mono">411000</td><td><input class="ei" value="Andorno Francois &mdash; F2026-0040"></td><td class="tr"><input class="ei" value="17 040" style="text-align:right;width:70px"></td><td class="tr">&mdash;</td><td><span class="tag tw2">&#9203;</span></td><td><span class="tag tw2" onclick="toggleEl('fecheance')" style="cursor:pointer">&#9888; Alerte</span></td></tr>
+<tr style="background:var(--rb)"><td>15/03</td><td class="mono">AC-025</td><td class="mono" style="color:var(--rt)">615000</td><td><input class="ei" style="border-bottom-color:var(--r);color:var(--rt)" value="Entretien bureau (doublon?)"></td><td class="tr"><input class="ei" style="border-bottom-color:var(--r);color:var(--rt);text-align:right;width:70px" value="480"></td><td class="tr">&mdash;</td><td><span class="tag tgy">&mdash;</span></td><td><span class="tag tr2" onclick="toggleEl('fdoublon')" style="cursor:pointer">&#9876; Doublon</span></td></tr>
+<tr><td>20/03</td><td class="mono">AC-028</td><td class="mono">606100</td><td><input class="ei" value="EDF Pro mars"></td><td class="tr"><input class="ei" value="340" style="text-align:right;width:70px"></td><td class="tr">&mdash;</td><td><span class="tag tg">&#10003;</span></td><td><span class="tag tg">OK</span></td></tr>
+</tbody></table>
+</div>
+<div id="f607" style="display:none"><div class="fd"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">Compte 607100 incorrect &mdash; materiel &gt;500&euro; HT doit etre immobilise (215400)</div><div class="fdesc">Impact: resultat fiscal surevalue 2 042&euro; &middot; Amortissement obligatoire 3 ans &middot; Dotation 56,72&euro;/mois</div><div class="fa"><button class="btn btn-s btn-sm">Corriger &rarr; 215400</button><button class="btn btn-sm">Ignorer</button></div></div></div></div>
+<div id="fecheance" style="display:none"><div class="fw"><div class="fic">&#9201;</div><div class="fb"><div class="ftt">Creance 17 040&euro; non lettree &mdash; J+9 retard &middot; Provision a constituer au J+30</div><div class="fdesc">Action recommandee: relance + provision 491000 (50%) = 8 520&euro;</div><div class="fa"><button class="btn btn-w btn-sm">Creer provision 491000</button><button class="btn btn-sm" onclick="go('recovery')">Dossier recouvrement</button></div></div></div></div>
+<div id="fdoublon" style="display:none"><div class="fd"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">Doublon probable &mdash; AC-025 identique a AC-019 (meme fournisseur, montant, mois)</div><div class="fdesc">Risque double paiement 480&euro; &middot; Verifier le releve bancaire avant de valider</div><div class="fa"><button class="btn btn-d btn-sm">Supprimer AC-025</button><button class="btn btn-sm">Conserver</button></div></div></div></div>
+</div>
+</div>
+
+<!-- LETTRAGE -->
+<div id="p-lettrage" class="panel">
+<div class="topbar"><div class="pt">Lettrage bancaire &mdash; Rapprochement IA</div><div class="tb-r"><button class="btn btn-p">Importer releve</button><button class="btn">Lettrage auto IA</button></div></div>
+<div class="content">
+<div class="fs"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">24/27 ecritures reconciliees (89%) &mdash; 3 ecarts a traiter</div></div></div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Releve bancaire</div>
+<table><thead><tr><th>Date</th><th>Libelle</th><th class="tr">Montant</th><th>Lettre</th></tr></thead>
+<tbody>
+<tr><td>01/04</td><td>VIR CLIENT 1</td><td class="tr pos">9 600,00</td><td><span class="tag tg">A</span></td></tr>
+<tr><td>28/03</td><td>PRELEVEMENT URSSAF</td><td class="tr neg">-3 240,00</td><td><span class="tag tg">B</span></td></tr>
+<tr style="background:var(--rb)"><td>26/03</td><td>VIR REF 2403261</td><td class="tr pos">4 200,00</td><td><span class="tag tr2">?</span></td></tr>
+<tr style="background:var(--ab)"><td>20/03</td><td>PRELEVEMENT EDF</td><td class="tr neg">-408,00</td><td><span class="tag tw2">~</span></td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Ecritures comptables</div>
+<table><thead><tr><th>Date</th><th>Compte</th><th>Libelle</th><th class="tr">Montant</th><th>Lettre</th></tr></thead>
+<tbody>
+<tr><td>01/04</td><td class="mono">411000</td><td>Client 1 F-042</td><td class="tr pos">9 600</td><td><span class="tag tg">A</span></td></tr>
+<tr><td>28/03</td><td class="mono">431000</td><td>URSSAF mars</td><td class="tr neg">3 240</td><td><span class="tag tg">B</span></td></tr>
+<tr style="background:var(--rb)"><td>26/03</td><td class="mono">&mdash;</td><td>Non identifie</td><td class="tr pos">4 200</td><td><span class="tag tr2">?</span></td></tr>
+<tr style="background:var(--ab)"><td>20/03</td><td class="mono">606100</td><td>EDF 340&euro;</td><td class="tr neg">340</td><td><span class="tag tw2">~</span></td></tr>
+</tbody></table></div>
+</div>
+<div class="fd"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">Ecart EDF: banque 408&euro; vs compta 340&euro; &mdash; TVA non saisie (68&euro;)?</div><div class="fa"><button class="btn btn-w btn-sm">Corriger auto &rarr; 445660</button></div></div></div>
+<div class="fw"><div class="fic">?</div><div class="fb"><div class="ftt">Virement entrant 4 200&euro; non identifie (26/03)</div><div class="fdesc">Imputer provisoirement en 419000 (Avances clients) ou 467000</div><div class="fa"><button class="btn btn-w btn-sm">&rarr; 419000</button><button class="btn btn-sm">&rarr; 467000</button></div></div></div>
+</div>
+</div>
+
+<!-- PLAN DE COMPTES -->
+<div id="p-plan" class="panel">
+<div class="topbar"><div class="pt">Plan de comptes &mdash; PCG 2025</div><div class="tb-r"><button class="btn">+ Creer compte</button><button class="btn btn-p">Export FEC</button></div></div>
+<div class="content">
+<div class="card">
+<table><thead><tr><th>Compte</th><th>Libelle</th><th>Classe</th><th class="tr">Debit</th><th class="tr">Credit</th><th>Actif</th></tr></thead>
+<tbody>
+<tr><td class="mono">215400</td><td><input class="ei" value="Materiel informatique"></td><td><span class="tag tb2">Immob.</span></td><td class="tr pos">2 042</td><td class="tr">&mdash;</td><td><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">411000</td><td><input class="ei" value="Clients &mdash; creances"></td><td><span class="tag tb2">Tiers</span></td><td class="tr pos">23 800</td><td class="tr">&mdash;</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">445660</td><td><input class="ei" value="TVA deductible"></td><td><span class="tag tgy">TVA</span></td><td class="tr pos">1 840</td><td class="tr">&mdash;</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">445710</td><td><input class="ei" value="TVA collectee 20%"></td><td><span class="tag tgy">TVA</span></td><td class="tr">&mdash;</td><td class="tr neg">9 720</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">491000</td><td><input class="ei" value="Depreciation creances"></td><td><span class="tag tw2">Provis.</span></td><td class="tr">&mdash;</td><td class="tr neg">0</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">641100</td><td><input class="ei" value="Salaires et traitements"></td><td><span class="tag tgy">Charges</span></td><td class="tr pos">37 200</td><td class="tr">&mdash;</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+<tr><td class="mono">706100</td><td><input class="ei" value="Prestations de services"></td><td><span class="tag tg">Produits</span></td><td class="tr">&mdash;</td><td class="tr neg">48 240</td><td><button class="tog on"><div class="togk"></div></button></td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<!-- BONS DE COMMANDE -->
+<div id="p-bdc" class="panel">
+<div class="topbar"><div class="pt">Bons de commande</div><div class="tb-r"><button class="btn btn-p" onclick="openModal('m-bdc')">+ Nouveau BC</button></div></div>
+<div class="content">
+<div class="mg mg3">
+<div class="mc"><div class="ml">BC en cours</div><div class="mv" style="color:var(--b)">8</div></div>
+<div class="mc"><div class="ml">Convertis en factures</div><div class="mv" style="color:var(--g)">23</div></div>
+<div class="mc"><div class="ml">Montant BC en attente</div><div class="mv" style="color:var(--a)">34 500 &euro;</div></div>
+</div>
+<div class="card">
+<table><thead><tr><th>N&deg; BC</th><th>Client</th><th>Date</th><th class="tr">Montant HT</th><th>Statut</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><b>BC-2026-008</b></td><td>Maison Carayon</td><td>01/04</td><td class="tr">10 000 &euro;</td><td><span class="tag tw2">Valide</span></td><td><button class="btn btn-sm btn-s" onclick="go('factures')">&#8594; Facture</button></td></tr>
+<tr><td><b>BC-2026-007</b></td><td>Domaine Aussières</td><td>28/03</td><td class="tr">7 000 &euro;</td><td><span class="tag tw2">Valide</span></td><td><button class="btn btn-sm btn-s" onclick="go('factures')">&#8594; Facture</button></td></tr>
+<tr><td><b>BC-2026-006</b></td><td>EARL Vergers Gaspard</td><td>20/03</td><td class="tr">5 000 &euro;</td><td><span class="tag tg">Facture emise</span></td><td><button class="btn btn-sm">Voir FA</button></td></tr>
+<tr><td><b>BC-2026-005</b></td><td>Andorno Francois</td><td>10/03</td><td class="tr">14 200 &euro;</td><td><span class="tag tg">Facture emise</span></td><td><button class="btn btn-sm">Voir FA</button></td></tr>
+</tbody></table>
+</div>
+<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">2 BCs valides non convertis en facture &mdash; conversion recommandee</div><div class="fdesc">BC-2026-008 (Maison Carayon 10 000&euro;) et BC-2026-007 (Domaine Aussières 7 000&euro;) sont valides et prets a etre factures</div><div class="fa"><button class="btn btn-sm btn-s" onclick="go('factures')">Convertir en factures</button></div></div></div>
+</div>
+</div>
+
+<!-- FACTURES -->
+<div id="p-factures" class="panel">
+<div class="topbar"><div class="pt">Factures electroniques</div><div class="tb-r"><button class="btn btn-p" onclick="openModal('m-facture')">+ Nouvelle facture</button></div></div>
+<div class="content">
+<div class="mg mg4">
+<div class="mc"><div class="ml">Facture ce mois</div><div class="mv" style="color:var(--b)" id="dash-ca">48 240 &euro;</div></div>
+<div class="mc"><div class="ml">En attente</div><div class="mv" style="color:var(--a)">23 800 &euro;</div></div>
+<div class="mc"><div class="ml">Encaisse</div><div class="mv" style="color:var(--g)">24 440 &euro;</div></div>
+<div class="mc"><div class="ml">En retard</div><div class="mv" style="color:var(--r)">17 040 &euro;</div></div>
+</div>
+<div class="card">
+<table><thead><tr><th>N&deg;</th><th>Client</th><th>BC origine</th><th>Date</th><th class="tr">HT</th><th class="tr">TTC</th><th>Statut</th><th>Action</th></tr></thead>
+<tbody>
+<tbody id="factures-tbody"><tr><td><b>FA-2026-042</b></td><td>Client 1</td><td class="mono">BC-006</td><td>01/04</td><td class="tr">8 000</td><td class="tr pos">9 600</td><td><span class="tag tg">Reglee</span></td><td><button class="btn btn-sm">PDF</button></td></tr>
+<tr><td><b>FA-2026-041</b></td><td>Vergers Gaspard</td><td class="mono">BC-006</td><td>28/03</td><td class="tr">5 000</td><td class="tr">6 000</td><td><span class="tag tw2">En attente</span></td><td><button class="btn btn-sm btn-d" onclick="go('recovery')">Relancer</button></td></tr>
+<tr style="background:var(--rb)"><td><b>FA-2026-040</b></td><td>Andorno Francois</td><td class="mono">BC-005</td><td>25/03</td><td class="tr">14 200</td><td class="tr neg">17 040</td><td><span class="tag tr2">En retard J+8</span></td><td><button class="btn btn-sm btn-d" onclick="go('recovery')">Dossier</button></td></tr>
+<tr><td><b>FA-2026-038</b></td><td>Durand SARL</td><td class="mono">&mdash;</td><td>02/01</td><td class="tr">6 500</td><td class="tr neg">7 800</td><td><span class="tag tp">Judiciaire</span></td><td><button class="btn btn-sm" onclick="go('judicial')">Dossier</button></td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<!-- RECOUVREMENT AMIABLE -->
+<div id="p-recovery" class="panel">
+<div class="topbar"><div class="pt">Recouvrement amiable</div><div class="tb-r"><span style="font-size:12px;color:var(--t2)">5 dossiers &middot; 23 800&euro;</span></div></div>
+<div class="content">
+<div class="card">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;flex-wrap:wrap;gap:8px">
+<div><div style="font-size:14px;font-weight:700">Andorno Francois &mdash; FA-2026-040</div><div style="font-size:12px;color:var(--rt);margin-top:2px">17 040&euro; &middot; J+8 de retard</div></div>
+<div style="display:flex;gap:6px"><button class="btn btn-p btn-sm" onclick="openModal('m-relance')">Envoyer relance</button><button class="btn btn-sm">&#128222; Appeler</button><button class="btn btn-d btn-sm" onclick="go('judicial')">&#8594; Judiciaire</button></div>
+</div>
+<div class="fw"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Script appel IA &mdash; meilleur creneau: mardi 10h-12h</div><div class="fdesc">"Bonjour, je me permets de vous contacter concernant la facture FA-2026-040 de 17 040&euro; echeue le 01/04. Pourriez-vous me confirmer la date de reglement prevue?"</div></div></div>
+<div class="tl">
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">Facture emise (25/03)</div></div></div>
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">Relance mail R1 automatique J+7</div><div class="tls">01/04/2026 &middot; Mail lu le 02/04</div></div></div>
+<div class="tli"><div class="tld warn"></div><div class="tlc"><div class="tll">Relance R2 &mdash; LRE prevue J+15</div><div class="tls">09/04/2026</div></div></div>
+<div class="tli"><div class="tld"></div><div class="tlc"><div class="tll">Mise en demeure J+30 (si impaye)</div><div class="tls">24/04/2026</div></div></div>
+<div class="tli"><div class="tld"></div><div class="tlc"><div class="tll">Migration judiciaire J+90 (si impaye)</div><div class="tls">24/06/2026</div></div></div>
+</div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Tous les dossiers actifs</div>
+<table><thead><tr><th>Client</th><th>Facture</th><th class="tr">Montant</th><th>Retard</th><th>Derniere action</th><th>Mail lu</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>Andorno Francois</td><td>FA-2026-040</td><td class="tr neg">17 040&euro;</td><td>J+8</td><td>Relance R1</td><td><span class="tag tg">Lu 02/04</span></td><td><span class="tag tw2">Relance 1</span></td></tr>
+<tr><td>Vergers Gaspard</td><td>FA-2026-041</td><td class="tr neg">6 000&euro;</td><td>J+4</td><td>Facture emise</td><td><span class="tag tgy">Non lu</span></td><td><span class="tag tw2">A relancer</span></td></tr>
+<tr><td>EARL Martin</td><td>FA-2026-035</td><td class="tr neg">3 200&euro;</td><td>J+22</td><td>Relance R2</td><td><span class="tag tr2">Non lu</span></td><td><span class="tag tr2">Relance 2</span></td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<!-- JUDICIAIRE -->
+<div id="p-judicial" class="panel">
+<div class="topbar"><div class="pt">Recouvrement judiciaire &mdash; Lettres recommandees</div></div>
+<div class="content">
+<div class="card">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;flex-wrap:wrap;gap:8px">
+<div><div style="font-size:14px;font-weight:700">Durand SARL &mdash; FA-2026-038</div><div style="font-size:12px;color:var(--t2)">7 800&euro; &middot; J+91 &middot; Ouvert 02/01/2026</div></div>
+<span class="tag tp">Phase judiciaire</span>
+</div>
+<div class="g2">
+<div>
+<div class="tl">
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">Facture FA-2026-038 emise</div><div class="tls">02/01/2026</div></div></div>
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">Relances R1, R2, R3 (mails)</div><div class="tls">09/01 au 01/02/2026</div></div></div>
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">LR1 &mdash; Mise en demeure AR24</div><div class="tls">10/02 &middot; Accuse recu 12/02</div></div></div>
+<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">LR2 &mdash; Sommation AR24</div><div class="tls">25/02 &middot; Accuse recu 27/02</div></div></div>
+<div class="tli"><div class="tld warn"></div><div class="tlc"><div class="tll">LR3 &mdash; Pre-contentieuse en cours</div><div class="tls">Generee le 10/03/2026</div></div></div>
+<div class="tli"><div class="tld warn"></div><div class="tlc"><div class="tll">Transmission avocat Me Dupont</div><div class="tls">15/03/2026 &mdash; Injonction en cours</div></div></div>
+</div>
+<div style="margin-top:.75rem"><button class="btn btn-pu" onclick="openModal('m-lr')">+ Generer nouvelle LR</button></div>
+</div>
+<div>
+<div style="background:var(--s3);border-radius:var(--rad2);padding:.875rem;font-size:12.5px">
+<div class="stat"><span class="sl">Creance principale</span><span class="sv">7 800&euro;</span></div>
+<div class="stat"><span class="sl">Interets de retard</span><span class="sv">156&euro;</span></div>
+<div class="stat"><span class="sl">Frais avocat estimes</span><span class="sv">1 200&euro;</span></div>
+<div class="stat"><span class="sl" style="font-weight:600">Total reclamable</span><span class="sv neg">9 156&euro;</span></div>
+</div>
+<div style="margin-top:.75rem;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad);font-size:12px"><span>FA-2026-038.pdf</span><button class="btn btn-sm">Voir</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad);font-size:12px"><span>LR1_AR24_Durand.pdf</span><button class="btn btn-sm">Voir</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--s2);border:1px solid var(--s4);border-radius:var(--rad);font-size:12px"><span>LR2_Sommation.pdf</span><button class="btn btn-sm">Voir</button></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- EMPLOYES -->
+<div id="p-employes" class="panel">
+<div class="topbar"><div class="pt">Dossiers employes</div><div class="tb-r"><button class="btn btn-p">+ Ajouter employe</button></div></div>
+<div class="content">
+<div class="mg mg4">
+<div class="mc"><div class="ml">Effectif total</div><div class="mv" style="color:var(--b)">4</div></div>
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400&euro;</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">5 576&euro;</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">17 976&euro;</div></div>
+</div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Equipe</div><div id="employes-list">
+<div class="ec" onclick="go('bulletin')"><div class="av avb">SB</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Sophie Bertrand</div><div style="font-size:11px;color:var(--t2)">Resp. commerciale &middot; CDI &middot; Syntec</div></div><span style="font-weight:600">3 800&euro;</span></div>
+<div class="ec" onclick="go('bulletin')"><div class="av avg">MK</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Mohamed Karim</div><div style="font-size:11px;color:var(--t2)">Technicien &middot; CDI</div></div><span style="font-weight:600">2 900&euro;</span></div>
+<div class="ec" onclick="go('bulletin')"><div class="av ava">LA</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Lea Arnaud</div><div style="font-size:11px;color:var(--t2)">Assistante &middot; CDD</div></div><span style="font-weight:600">2 200&euro;</span></div>
+<div class="ec" onclick="go('bulletin')"><div class="av avp">TD</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Thomas Dumas</div><div style="font-size:11px;color:var(--t2)">Developpeur &middot; CDI &middot; Syntec</div></div><span style="font-weight:600">3 500&euro;</span></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Structure dossier employe</div>
+<div style="font-family:monospace;font-size:12px;line-height:1.8">
+<div style="color:var(--b);font-weight:600">&#128193; Sophie Bertrand</div>
+<div style="padding-left:16px;border-left:1px solid var(--s4);margin-left:8px">
+<div>&#128196; Contrats (CDI + avenants)</div>
+<div>&#127958; Conges (demandes, soldes, historique)</div>
+<div>&#128203; Attestations (generees a la demande)</div>
+<div>&#128181; Fiches de paie
+<div style="padding-left:16px;border-left:1px solid var(--s4);margin-left:8px">
+<div style="color:var(--t2)">&#128193; 2024 (12 mois)</div>
+<div style="color:var(--t2)">&#128193; 2025 (12 mois)</div>
+<div style="color:var(--b)">&#128193; 2026
+<div style="padding-left:16px;border-left:1px solid var(--s4);margin-left:8px">
+<div>&#128196; 01-Janvier.pdf</div>
+<div>&#128196; 02-Fevrier.pdf</div>
+<div>&#128196; 03-Mars.pdf</div>
+<div style="color:var(--a)">&#128196; 04-Avril (en cours)</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="fi" style="margin-top:.5rem"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Reduction Fillon applicable a Lea Arnaud et Mohamed Karim</div><div class="fdesc">Economie patronale estimee: 1 840&euro;/mois</div></div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- BULLETIN IA -->
+<div id="p-bulletin" class="panel">
+<div class="topbar"><div class="pt">Bulletin de paie &mdash; Moteur IA</div>
+<div class="tb-r">
+<div style="display:flex;gap:4px">
+<button class="btn" id="e-sb" onclick="setEmp(this,'sb')" style="background:var(--bb);color:var(--bt)">SB</button>
+<button class="btn" id="e-mk" onclick="setEmp(this,'mk')">MK</button>
+<button class="btn" id="e-la" onclick="setEmp(this,'la')">LA</button>
+<button class="btn" id="e-td" onclick="setEmp(this,'td')">TD</button>
+</div>
+<button class="btn btn-p">PDF + DSN</button></div></div>
+<div class="content">
+<div id="flag-smic" class="fd" style="display:none"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">Net a payer inferieur au SMIC net (1 383&euro;) &mdash; ILLEGAL</div></div></div>
+<div class="g2">
+<div class="card">
+<div class="ct" style="margin-bottom:.75rem">Parametres</div>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:.875rem">
+<div class="av avb" id="b-av">SB</div>
+<div><div style="font-size:13.5px;font-weight:700" id="b-name">Sophie Bertrand</div><div style="font-size:11px;color:var(--t2)" id="b-role">Resp. commerciale &middot; CDI</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="mrow"><div class="mlbl">Salaire brut</div><input type="number" id="i-brut" value="3800" oninput="calcPaie()"></div>
+<div class="mrow"><div class="mlbl">Taux PAS (%)</div><input type="number" id="i-pas" value="11" step="0.1" oninput="calcPaie()"></div>
+<div class="mrow"><div class="mlbl">Prime (&euro;)</div><input type="number" id="i-prime" value="0" step="50" oninput="calcPaie()"></div>
+<div class="mrow"><div class="mlbl">Tickets rest. (jours)</div><input type="number" id="i-tr" value="21" oninput="calcPaie()"></div>
+<div class="mrow"><div class="mlbl">Absences (jours)</div><input type="number" id="i-abs" value="0" step="0.5" oninput="calcPaie()"></div>
+<div class="mrow"><div class="mlbl">Mois</div><select><option>Avril 2026</option><option>Mars 2026</option></select></div>
+</div>
+</div>
+<div class="card">
+<div class="ct" style="margin-bottom:.75rem">Bulletin calcule <span class="ai">&#10022; Temps reel</span></div>
+<table style="font-size:12px"><thead><tr><th>Rubrique</th><th class="tr">Base</th><th class="tr">Montant</th></tr></thead>
+<tbody id="paie-rows"></tbody></table>
+</div>
+</div>
+<div id="ai-paie-flags"></div>
+<div class="card">
+<div class="ct" style="margin-bottom:.75rem">Synthese employeur</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div style="background:var(--s3);border-radius:var(--rad);padding:.75rem">
+<div style="font-size:11px;color:var(--t2);margin-bottom:3px">Brut total</div><div class="mv pos" id="r-brut">&mdash;</div>
+<div style="font-size:11px;color:var(--t2);margin-top:6px">+ Charges pat.</div><div class="mv neg" id="r-charges">&mdash;</div>
+<div style="font-size:12px;font-weight:700;margin-top:6px;border-top:1px solid var(--s4);padding-top:5px">Cout: <span id="r-cout">&mdash;</span></div>
+</div>
+<div style="background:var(--s3);border-radius:var(--rad);padding:.75rem">
+<div style="font-size:11px;color:var(--t2)">Net avant impot</div><div class="mv" id="r-netimpot">&mdash;</div>
+<div style="font-size:11px;color:var(--t2);margin-top:6px">- Retenue PAS</div><div class="mv neg" id="r-pas">&mdash;</div>
+<div style="font-size:13px;font-weight:700;margin-top:6px;border-top:1px solid var(--s4);padding-top:5px">Net: <span id="r-net" class="pos">&mdash;</span></div>
+</div>
+<div style="background:var(--s3);border-radius:var(--rad);padding:.75rem">
+<div style="font-size:11px;color:var(--t2)">Ratio net/brut</div>
+<div style="font-size:24px;font-weight:800" id="r-ratio">&mdash;</div>
+<div class="rb" style="margin-top:6px"><div class="rbf" id="r-bar" style="background:var(--g)"></div></div>
+<div style="font-size:11px;color:var(--t2);margin-top:4px" id="r-bar-lbl"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- DSN -->
+<div id="p-dsn" class="panel">
+<div class="topbar"><div class="pt">DSN &mdash; Declaration Sociale Nominative</div><div class="tb-r"><button class="btn btn-p">Telетransmettre DSN</button></div></div>
+<div class="content">
+<div class="fd"><div class="fic">&#9201;</div><div class="fb"><div class="ftt">DSN avril a emettre avant le 05/05/2026 &mdash; J-28</div><div class="fdesc">4 bulletins finalises &middot; Verification IA: aucun ecart vs mois precedent</div></div></div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Recapitulatif DSN avril 2026</div>
+<table><thead><tr><th>Employe</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>Sophie Bertrand</td><td class="tr">3 800</td><td class="tr">3 045</td><td class="tr neg">335</td><td><span class="tag tg">OK</span></td></tr>
+<tr><td>Mohamed Karim</td><td class="tr">2 900</td><td class="tr">2 325</td><td class="tr neg">186</td><td><span class="tag tg">OK</span></td></tr>
+<tr><td>Lea Arnaud</td><td class="tr">2 200</td><td class="tr">1 763</td><td class="tr neg">88</td><td><span class="tag tg">OK</span></td></tr>
+<tr><td>Thomas Dumas</td><td class="tr">3 500</td><td class="tr">2 804</td><td class="tr neg">252</td><td><span class="tag tg">OK</span></td></tr>
+<tr class="subr"><td>TOTAL</td><td class="tr">12 400</td><td class="tr">9 937</td><td class="tr neg">861</td><td></td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Statut declarations 2026</div>
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--gb);border-radius:var(--rad)"><span style="font-size:12.5px;font-weight:500">DSN janvier &mdash; fevrier &mdash; mars</span><span class="tag tg">&#10003; Transmises</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--ab);border-radius:var(--rad)"><span style="font-size:12.5px;font-weight:500">DSN avril 2026</span><span class="tag tw2">A transmettre J-28</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--s3);border-radius:var(--rad)"><span style="font-size:12.5px;font-weight:500">URSSAF avril</span><span class="tag tgy">Prelevement 30/04</span></div>
+</div></div>
+</div>
+</div>
+</div>
+
+<!-- RAS -->
+<div id="p-ras" class="panel">
+<div class="topbar"><div class="pt">Retenues a la source &mdash; Employes et Fournisseurs</div><div class="tb-r"><button class="btn btn-p">Exporter DAS2</button></div></div>
+<div class="content">
+<div class="tabs" id="ras-tabs">
+<div class="tab active" onclick="showTab('ras','emp')">RAS Employes (PAS)</div>
+<div class="tab" onclick="showTab('ras','four')">RAS Fournisseurs</div>
+<div class="tab" onclick="showTab('ras','bilan')">Bilan consolide</div>
+</div>
+<div id="ras-emp" class="tc active">
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">RAS Employes &mdash; Avril 2026</div>
+<table><thead><tr><th>Employe</th><th class="tr">Net imposable</th><th>Taux PAS</th><th class="tr">RAS</th></tr></thead>
+<tbody>
+<tr><td>S. Bertrand</td><td class="tr">3 045&euro;</td><td>11%</td><td class="tr neg">335&euro;</td></tr>
+<tr><td>M. Karim</td><td class="tr">2 325&euro;</td><td>8%</td><td class="tr neg">186&euro;</td></tr>
+<tr><td>L. Arnaud</td><td class="tr">1 763&euro;</td><td>5%</td><td class="tr neg">88&euro;</td></tr>
+<tr><td>T. Dumas</td><td class="tr">2 804&euro;</td><td>9%</td><td class="tr neg">252&euro;</td></tr>
+<tr class="subr"><td>Total</td><td class="tr">9 937&euro;</td><td></td><td class="tr neg">861&euro;</td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Recapitulatif annuel 2026</div>
+<table><thead><tr><th>Mois</th><th class="tr">Net imposable</th><th class="tr">RAS versee</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>Janvier</td><td class="tr">9 720&euro;</td><td class="tr">832&euro;</td><td><span class="tag tg">Versee</span></td></tr>
+<tr><td>Fevrier</td><td class="tr">9 850&euro;</td><td class="tr">845&euro;</td><td><span class="tag tg">Versee</span></td></tr>
+<tr><td>Mars</td><td class="tr">9 937&euro;</td><td class="tr">861&euro;</td><td><span class="tag tg">Versee</span></td></tr>
+<tr style="background:var(--ab)"><td>Avril</td><td class="tr">9 937&euro;</td><td class="tr">861&euro;</td><td><span class="tag tw2">A verser J-2</span></td></tr>
+<tr class="subr"><td>Total YTD</td><td class="tr">39 444&euro;</td><td class="tr">3 399&euro;</td><td></td></tr>
+</tbody></table></div>
+</div>
+</div>
+<div id="ras-four" class="tc">
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">RAS Fournisseurs &mdash; Avril 2026</div>
+<table><thead><tr><th>Fournisseur</th><th class="tr">Facture</th><th>Taux</th><th class="tr">RAS retenue</th><th class="tr">Net paye</th></tr></thead>
+<tbody>
+<tr><td>Societe X (ES)</td><td class="tr">5 000&euro;</td><td>15%</td><td class="tr neg">750&euro;</td><td class="tr pos">4 250&euro;</td></tr>
+<tr><td>Consultant Y</td><td class="tr">2 000&euro;</td><td>25%</td><td class="tr neg">500&euro;</td><td class="tr pos">1 500&euro;</td></tr>
+<tr class="subr"><td>Total</td><td class="tr">7 000&euro;</td><td></td><td class="tr neg">1 250&euro;</td><td class="tr pos">5 750&euro;</td></tr>
+</tbody></table>
+<div class="fi" style="margin-top:8px"><div class="fic">&#9201;</div><div class="fb"><div class="ftt">Versement DGFIP avant le 15/04 &mdash; 1 250&euro;</div></div></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Ecritures comptables auto</div>
+<div style="background:var(--s3);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px">
+<div class="er"><span>607xxx</span><span>Achat HT total</span><span class="pos">7 000</span><span>&mdash;</span></div>
+<div class="er"><span>401000</span><span>Fournisseur (net a payer)</span><span>&mdash;</span><span class="neg">5 750</span></div>
+<div class="er"><span>447300</span><span>RAS fournisseur a reverser</span><span>&mdash;</span><span class="neg">1 250</span></div>
+</div>
+</div>
+</div>
+</div>
+<div id="ras-bilan" class="tc">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Bilan consolide RAS &mdash; Avril 2026</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+<div style="text-align:center;padding:.875rem;background:var(--bb);border-radius:var(--rad2)"><div class="ml">RAS Employes</div><div style="font-size:20px;font-weight:700;color:var(--bt)">861&euro;</div></div>
+<div style="text-align:center;padding:.875rem;background:var(--pb);border-radius:var(--rad2)"><div class="ml">RAS Fournisseurs</div><div style="font-size:20px;font-weight:700;color:var(--pt)">1 250&euro;</div></div>
+<div style="text-align:center;padding:.875rem;background:var(--rb);border-radius:var(--rad2)"><div class="ml">Total a verser DGFIP</div><div style="font-size:20px;font-weight:700;color:var(--rt)">2 111&euro;</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- TVA -->
+<div id="p-decl-tva" class="panel">
+<div class="topbar"><div class="pt">Declaration TVA CA3</div><div class="tb-r"><span class="tag tr2">Echeance 05/04 &mdash; J-2</span><button class="btn btn-p" style="margin-left:6px">Teledeclarer EDI</button></div></div>
+<div class="content">
+<div class="fd"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">TVA a risque 408&euro; (Legrand) &mdash; facture non conforme art.289 CGI</div><div class="fdesc">Exclure jusqu'a reception facture rectificative avec SIREN valide</div><div class="fa"><button class="btn btn-d btn-sm">Exclure (prudent)</button><button class="btn btn-sm">Inclure quand meme</button></div></div></div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">TVA collectee</div>
+<table><tbody>
+<tr><td>Ventes 20% (base 48 600&euro;)</td><td class="tr pos">9 720,00&euro;</td></tr>
+<tr class="subr"><td>Total collectee</td><td class="tr pos" style="font-size:15px">9 720,00&euro;</td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">TVA deductible</div>
+<table><tbody>
+<tr><td>Achats 20% (base 9 200&euro;)</td><td class="tr neg">1 840,00&euro;</td></tr>
+<tr style="background:var(--ab)"><td>Legrand &#9888; (a risque)</td><td class="tr" style="color:var(--at)">408,33&euro;</td></tr>
+<tr class="subr"><td>Total deductible (prudent)</td><td class="tr neg">1 840,00&euro;</td></tr>
+</tbody></table></div>
+</div>
+<div class="card">
+<div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap">
+<div><div class="ml">TVA collectee</div><div class="mv pos">9 720&euro;</div></div>
+<div style="font-size:20px;color:var(--t2)">&#8722;</div>
+<div><div class="ml">TVA deductible</div><div class="mv neg">1 840&euro;</div></div>
+<div style="font-size:20px;color:var(--t2)">=</div>
+<div><div class="ml">Net a payer</div><div class="mv" style="color:var(--r);font-size:26px;font-weight:800">7 880&euro;</div></div>
+<div style="margin-left:auto"><div class="ml">Echeance</div><div style="font-size:14px;font-weight:700;color:var(--rt)">05/04/2026</div></div>
+</div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Historique declarations TVA 2026</div>
+<table><thead><tr><th>Mois</th><th class="tr">Collectee</th><th class="tr">Deductible</th><th class="tr">Net paye</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>Janvier</td><td class="tr">6 240&euro;</td><td class="tr">1 420&euro;</td><td class="tr neg">4 820&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
+<tr><td>Fevrier</td><td class="tr">7 120&euro;</td><td class="tr">1 580&euro;</td><td class="tr neg">5 540&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
+<tr><td>Mars</td><td class="tr">8 400&euro;</td><td class="tr">1 720&euro;</td><td class="tr neg">6 680&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
+<tr style="background:var(--rb)"><td>Avril</td><td class="tr">9 720&euro;</td><td class="tr">1 840&euro;</td><td class="tr neg">7 880&euro;</td><td><span class="tag tr2">&#9888; A deposer J-2</span></td></tr>
+</tbody></table></div>
+</div>
+</div>
+
+<!-- IS + CIR -->
+<div id="p-decl-is" class="panel">
+<div class="topbar"><div class="pt">Impots &mdash; IS et Credit Impot Recherche</div><div class="tb-r"><button class="btn btn-p">Teledeclarer DGFIP</button></div></div>
+<div class="content">
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Acomptes IS 2026</div>
+<table><thead><tr><th>Echeance</th><th>Nature</th><th class="tr">Montant</th><th>Statut</th></tr></thead>
+<tbody>
+<tr><td>15/03 &#10003;</td><td>Acompte T1 (IS N-1 x25%)</td><td class="tr neg">4 800&euro;</td><td><span class="tag tg">Paye</span></td></tr>
+<tr style="background:var(--ab)"><td>15/06</td><td>Acompte T2</td><td class="tr neg">4 800&euro;</td><td><span class="tag tw2">J-73</span></td></tr>
+<tr><td>15/09</td><td>Acompte T3</td><td class="tr neg">4 800&euro;</td><td><span class="tag tgy">En attente</span></td></tr>
+<tr><td>15/12</td><td>Acompte T4</td><td class="tr neg">4 800&euro;</td><td><span class="tag tgy">En attente</span></td></tr>
+<tr class="subr"><td colspan="2">Total acomptes 2026</td><td class="tr neg">19 200&euro;</td><td></td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Credit Impot Recherche (CIR)</div>
+<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:.75rem">
+<div class="stat"><span class="sl">Salaires chercheurs</span><span class="sv">8 400&euro;</span></div>
+<div class="stat"><span class="sl">Sous-traitance R&D</span><span class="sv">12 000&euro;</span></div>
+<div class="stat"><span class="sl">Frais brevets</span><span class="sv">2 400&euro;</span></div>
+<div class="stat"><span class="sl">Amort. R&D</span><span class="sv">1 200&euro;</span></div>
+<div class="stat"><span class="sl" style="font-weight:600">Total depenses R&D</span><span class="sv">24 000&euro;</span></div>
+</div>
+<div style="text-align:center;padding:.875rem;background:var(--gb);border-radius:var(--rad2)"><div class="ml">CIR estime (taux 30%)</div><div style="font-size:26px;font-weight:800;color:var(--g)">7 200&euro;</div><div style="font-size:11.5px;color:var(--t2);margin-top:3px">A imputer sur IS ou rembourser</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- URSSAF -->
+<div id="p-decl-urssaf" class="panel">
+<div class="topbar"><div class="pt">URSSAF &mdash; Cotisations et DSN</div><div class="tb-r"><button class="btn btn-p">Telетransmettre</button></div></div>
+<div class="content">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Bordereau cotisations &mdash; Avril 2026</div>
+<table><thead><tr><th>Organisme / Nature</th><th>Taux</th><th class="tr">Sophie B.</th><th class="tr">Mohamed K.</th><th class="tr">Lea A.</th><th class="tr">Thomas D.</th><th class="tr">Total</th></tr></thead>
+<tbody>
+<tr class="sr"><td colspan="7">Part salariale</td></tr>
+<tr><td>Maladie salariale</td><td>0.40%</td><td class="tr">15</td><td class="tr">12</td><td class="tr">9</td><td class="tr">14</td><td class="tr neg">50</td></tr>
+<tr><td>Retraite CNAV sal.</td><td>6.90%</td><td class="tr">262</td><td class="tr">200</td><td class="tr">152</td><td class="tr">242</td><td class="tr neg">856</td></tr>
+<tr><td>CSG deductible</td><td>6.80%</td><td class="tr">254</td><td class="tr">194</td><td class="tr">147</td><td class="tr">234</td><td class="tr neg">829</td></tr>
+<tr class="sr"><td colspan="7">Part patronale</td></tr>
+<tr><td>Maladie patronale</td><td>13%</td><td class="tr">494</td><td class="tr">377</td><td class="tr">286</td><td class="tr">455</td><td class="tr neg">1 612</td></tr>
+<tr><td>CNAV patronale</td><td>8.55%</td><td class="tr">325</td><td class="tr">248</td><td class="tr">188</td><td class="tr">299</td><td class="tr neg">1 060</td></tr>
+<tr><td>Chomage patronal</td><td>4.05%</td><td class="tr">154</td><td class="tr">117</td><td class="tr">89</td><td class="tr">142</td><td class="tr neg">502</td></tr>
+<tr><td>Agirc-Arrco pat.</td><td>4.72%</td><td class="tr">179</td><td class="tr">137</td><td class="tr">104</td><td class="tr">165</td><td class="tr neg">585</td></tr>
+<tr class="subr"><td colspan="2">TOTAL COTISATIONS</td><td class="tr neg">1 683</td><td class="tr neg">1 285</td><td class="tr neg">975</td><td class="tr neg">1 551</td><td class="tr neg" style="font-size:14px">6 780&euro;</td></tr>
+</tbody></table>
+<div style="margin-top:.75rem;padding:.75rem;background:var(--rb);border-radius:var(--rad);display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;font-weight:600;color:var(--rt)">Echeance paiement: 30/04/2026 &middot; Prelevement BNP</span><span class="tag tr2">6 780&euro;</span></div>
+</div>
+</div>
+</div>
+
+<!-- LIASSE -->
+<div id="p-liasse" class="panel">
+<div class="topbar"><div class="pt">Liasse fiscale &mdash; 2050 a 2058</div><div class="tb-r"><span class="ai">&#10022; Auto-remplie</span><button class="btn btn-p" style="margin-left:6px">Teledeclarer DGFIP</button></div></div>
+<div class="content">
+<div class="fs"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Cases vertes = auto depuis compta &middot; Cases blanches = saisie manuelle requise &middot; 1 anomalie detectee (case GN)</div></div></div>
+<div class="tabs" id="liasse-tabs">
+<div class="tab active" onclick="showTab('liasse','2050')">2050 &mdash; Actif</div>
+<div class="tab" onclick="showTab('liasse','2051')">2051 &mdash; Passif</div>
+<div class="tab" onclick="showTab('liasse','2052')">2052 &mdash; Resultat</div>
+<div class="tab" onclick="showTab('liasse','2058')">2058 &mdash; Fiscal</div>
+</div>
+<div id="liasse-2050" class="tc active"><div class="card">
+<div class="lh lf"><span>Ref.</span><span>Designation</span><span>Brut N</span><span>Net N</span></div>
+<div class="ls lf"><span></span><span>IMMOBILISATIONS</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">AB</span><span>Frais R&D</span><input class="li auto" value="6 000" readonly><input class="li auto" value="4 800" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">BS</span><span>Installations techniques</span><input class="li auto" value="28 000" readonly><input class="li auto" value="22 400" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">BT</span><span>Autres immob. corporelles</span><input class="li auto" value="14 800" readonly><input class="li auto" value="12 880" readonly></div>
+<div class="ls lf"><span></span><span>ACTIF CIRCULANT</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">CJ</span><span>Stocks</span><input class="li auto" value="12 500" readonly><input class="li auto" value="12 500" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">CL</span><span>Creances clients</span><input class="li auto" value="185 400" readonly><input class="li auto" value="178 600" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">CQ</span><span>Disponibilites</span><input class="li auto" value="44 300" readonly><input class="li auto" value="44 300" readonly></div>
+<div class="lf" style="background:var(--bb);font-weight:700"><span class="mono">CO</span><span>TOTAL GENERAL ACTIF</span><input class="li auto" value="303 400" readonly style="font-weight:700"><input class="li auto" value="287 400" readonly style="font-weight:700"></div>
+</div></div>
+<div id="liasse-2051" class="tc"><div class="card">
+<div class="lh lf"><span>Ref.</span><span>Designation</span><span>N</span><span>N-1</span></div>
+<div class="ls lf"><span></span><span>CAPITAUX PROPRES</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">DA</span><span>Capital social</span><input class="li auto" value="20 000" readonly><input class="li auto" value="20 000" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">DI</span><span>Report a nouveau</span><input class="li auto" value="51 020" readonly><input class="li auto" value="40 340" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">DK</span><span>Resultat exercice</span><input class="li auto" value="-4 820" readonly style="color:var(--rt)"><input class="li auto" value="0" readonly></div>
+<div class="ls lf"><span></span><span>DETTES</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">DT</span><span>Dettes financieres</span><input class="li auto" value="142 800" readonly><input class="li auto" value="73 400" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">DX</span><span>Dettes fournisseurs</span><input class="li auto" value="48 200" readonly><input class="li auto" value="58 400" readonly></div>
+<div class="lf" style="background:var(--bb);font-weight:700"><span class="mono">EE</span><span>TOTAL GENERAL PASSIF</span><input class="li auto" value="287 400" readonly style="font-weight:700"><input class="li auto" value="239 400" readonly style="font-weight:700"></div>
+</div></div>
+<div id="liasse-2052" class="tc"><div class="card">
+<div class="fd" style="margin-bottom:.75rem"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">Case GN: dotations depreciations 0&euro; &mdash; 11 900&euro; requis</div><div class="fa"><button class="btn btn-sm btn-d">Corriger</button></div></div></div>
+<div class="lh lf"><span>Ref.</span><span>Designation</span><span>N</span><span>N-1</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">FM</span><span>Prestations de services</span><input class="li auto" value="88 400" readonly><input class="li auto" value="65 800" readonly></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">GJ</span><span>Salaires et traitements</span><input class="li auto" value="37 200" readonly><input class="li auto" value="26 400" readonly></div>
+<div class="lf" style="background:var(--rb)"><span class="mono" style="color:var(--rt)">GN</span><span style="color:var(--rt)">Dotations depreciations &#9876;</span><input class="li flag" value="0"><input class="li auto" value="0" readonly></div>
+<div class="lf" style="background:var(--bb);font-weight:700"><span class="mono">HN</span><span>RESULTAT NET</span><input class="li auto" value="-4 820" readonly style="color:var(--rt);font-weight:700"><input class="li auto" value="1 420" readonly></div>
+</div></div>
+<div id="liasse-2058" class="tc"><div class="card">
+<div class="lh lf"><span>Ref.</span><span>Designation</span><span>Montant</span><span>Note</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">XA</span><span>Resultat comptable</span><input class="li auto" value="-4 820" readonly style="color:var(--rt)"><span style="font-size:11px;color:var(--t2)">Base</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">WQ</span><span>+ Reintegrations fiscales</span><input class="li" value="2 042"><span style="font-size:11px;color:var(--t2)">Legrand</span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">XG</span><span>- Deductions CIR 30%</span><input class="li" value="3 600"><span style="font-size:11px;color:var(--gt)">CIR R&D</span></div>
+<div class="lf" style="background:var(--bb);font-weight:700"><span class="mono">XI</span><span>RESULTAT FISCAL</span><input class="li auto" value="-6 378" readonly style="font-weight:700"><span></span></div>
+<div class="lf"><span class="mono" style="color:var(--t2)">YC</span><span>CIR a imputer</span><input class="li auto" value="7 200" readonly style="color:var(--gt)"><span style="font-size:11px;color:var(--gt)">A deduire IS</span></div>
+</div></div>
+</div>
+</div>
+
+<!-- BUDGET -->
+<div id="p-budget" class="panel">
+<div class="topbar"><div class="pt">Budget &mdash; Previsionnel</div><div class="tb-r"><select class="sel"><option>Budget annuel 2026</option><option>Budget mensuel</option></select><button class="btn btn-p">Sauvegarder</button></div></div>
+<div class="content">
+<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Budget auto-alimente depuis la comptabilite &mdash; ecarts calcules en temps reel</div></div></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Budget vs Reel &mdash; T1 2026</div>
+<table><thead><tr><th>Rubrique</th><th class="tr">Budget</th><th class="tr">Reel</th><th class="tr">Ecart &euro;</th><th class="tr">Ecart %</th><th>Analyse IA</th></tr></thead>
+<tbody>
+<tr><td style="font-weight:700">CA total</td><td class="tr">120 000&euro;</td><td class="tr">88 400&euro;</td><td class="tr neg">-31 600&euro;</td><td class="tr neg">-26%</td><td style="font-size:11.5px;color:var(--t2)">Retard demarrage clients</td></tr>
+<tr><td>Masse salariale</td><td class="tr">36 000&euro;</td><td class="tr">37 200&euro;</td><td class="tr neg">+1 200&euro;</td><td class="tr" style="color:var(--at)">+3%</td><td style="font-size:11.5px;color:var(--t2)">Prime CDD non budgetee</td></tr>
+<tr><td>Charges sociales</td><td class="tr">16 200&euro;</td><td class="tr">16 740&euro;</td><td class="tr neg">+540&euro;</td><td class="tr" style="color:var(--at)">+3%</td><td style="font-size:11.5px;color:var(--t2)">Lie masse salariale</td></tr>
+<tr><td>Achats materiels</td><td class="tr">25 000&euro;</td><td class="tr">18 200&euro;</td><td class="tr pos">-6 800&euro;</td><td class="tr pos">-27%</td><td style="font-size:11.5px;color:var(--t2)">Commandes decalees Q2</td></tr>
+<tr><td>Frais deplacements</td><td class="tr">6 000&euro;</td><td class="tr">7 800&euro;</td><td class="tr neg">+1 800&euro;</td><td class="tr neg">+30%</td><td style="font-size:11.5px;color:var(--t2)">Salons + visites clients</td></tr>
+<tr><td>R&D sous-traitance</td><td class="tr">15 000&euro;</td><td class="tr">12 000&euro;</td><td class="tr pos">-3 000&euro;</td><td class="tr pos">-20%</td><td style="font-size:11.5px;color:var(--t2)">Freinage attente clients</td></tr>
+<tr class="subr"><td>Resultat net</td><td class="tr pos">13 800&euro;</td><td class="tr neg">-4 820&euro;</td><td class="tr neg">-18 620&euro;</td><td class="tr neg">-135%</td><td style="font-size:11.5px;color:var(--rt)">Deficit de demarrage</td></tr>
+</tbody></table>
+</div>
+<div class="fw"><div class="fic">&#128202;</div><div class="fb"><div class="ftt">CA -26% vs budget &mdash; acceler les signatures Andorno et Maison Carayon pour combler l'ecart Q2</div><div class="fdesc">Potentiel +24 000&euro; si signes avant fin avril &middot; Frais deplacements +30%: regrouper visites par zone &rarr; -1 200&euro;/trimestre</div></div></div>
+</div>
+</div>
+
+<!-- ECARTS -->
+<div id="p-ecarts" class="panel">
+<div class="topbar"><div class="pt">Ecarts &mdash; Analyse et Suggestions IA</div></div>
+<div class="content">
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Analyse des ecarts &mdash; Avril 2026</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="padding:.875rem;background:var(--rb);border-radius:var(--rad2);border-left:3px solid var(--r)"><div style="font-size:12.5px;font-weight:700;color:var(--rt)">CA -26% vs budget</div><div style="font-size:12px;color:var(--t2);margin-top:3px">Impaye Andorno (17 040&euro;) principal responsable. Sans cet impaye: CA serait a +15 280&euro; du budget.</div></div>
+<div style="padding:.875rem;background:var(--ab);border-radius:var(--rad2);border-left:3px solid var(--a)"><div style="font-size:12.5px;font-weight:700;color:var(--at)">Frais deplacements +30%</div><div style="font-size:12px;color:var(--t2);margin-top:3px">3 deplacements non budgetes (salons, visites clients) = 2 200&euro; sur 2 800&euro; d'ecart total.</div></div>
+<div style="padding:.875rem;background:var(--gb);border-radius:var(--rad2);border-left:3px solid var(--g)"><div style="font-size:12.5px;font-weight:700;color:var(--gt)">Achats materiels -27% (favorable)</div><div style="font-size:12px;color:var(--t2);margin-top:3px">Commandes Schneider decalees au Q2. Economie de tresorerie court terme: +6 800&euro;.</div></div>
+</div></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Suggestions IA &mdash; 3 niveaux</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div class="fd"><div class="fic">&#128308;</div><div class="fb"><div class="ftt">URGENT &mdash; Relancer Andorno avant le 10/04</div><div class="fdesc">Impact direct: +17 040&euro; tresorerie &middot; Solde passerait de 65 910&euro; a 82 950&euro;</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('recovery')">Relancer</button></div></div></div>
+<div class="fw"><div class="fic">&#128992;</div><div class="fb"><div class="ftt">Regrouper les deplacements par zone geographique</div><div class="fdesc">Economie estimee: 1 200&euro;/trimestre &middot; Utiliser visio pour premiers RDV</div></div></div>
+<div class="fs"><div class="fic">&#128994;</div><div class="fb"><div class="ftt">Budget sous-consomme R&D &mdash; accelerer avant cloture</div><div class="fdesc">3 000&euro; disponibles &middot; Eligible CIR &rarr; credit fiscal potentiel +900&euro;</div></div></div>
+</div></div>
+</div>
+</div>
+</div>
+
+<!-- OPTIMISATION IA -->
+<div id="p-optim" class="panel">
+<div class="topbar"><div class="pt">Optimisation IA &mdash; Analyse continue</div><div class="tb-r"><span class="ai">&#10022; Analyse nocturne active</span></div></div>
+<div class="content">
+<div style="text-align:center;padding:1.25rem;background:var(--pb);border-radius:var(--rad2);border:1px solid #D0BFFF;margin-bottom:1rem">
+<div style="font-size:48px;font-weight:800;color:var(--p)">68<span style="font-size:22px;color:var(--t3)">/100</span></div>
+<div style="font-size:13px;color:var(--pt);margin-top:4px">Score d'optimisation global &mdash; Economie potentielle totale: <strong>31 000&euro;/an</strong></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">&#128308; URGENT &mdash; Impact immediat</div>
+<div class="fd"><div class="fic">1</div><div class="fb"><div class="ftt">Provision 491000 manquante &mdash; 11 900&euro;</div><div class="fdesc">Creances douteuses non provisionnees &middot; Impact IS: -2 975&euro; &middot; Risque redressement fiscal</div><div class="fa"><button class="btn btn-sm btn-d">Creer provision auto</button></div></div></div>
+<div class="fd"><div class="fic">2</div><div class="fb"><div class="ftt">Reduction Fillon non activee &mdash; 1 840&euro;/mois</div><div class="fdesc">Applicable a Lea (2 200&euro;) et Mohamed (2 900&euro;) &middot; Economie annuelle: 22 080&euro;</div><div class="fa"><button class="btn btn-sm btn-d">Activer automatiquement</button></div></div></div>
+<div class="fd"><div class="fic">3</div><div class="fb"><div class="ftt">DSO 81j &mdash; objectif 45j</div><div class="fdesc">Chaque jour de reduction = +2 200&euro; tresorerie &middot; Action: acomptes 30% a commande</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('recovery')">Relancer les impayes</button></div></div></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">&#128992; IMPORTANT &mdash; Court terme</div>
+<div class="fw"><div class="fic">4</div><div class="fb"><div class="ftt">Abonnement SaaS inutilise &mdash; 340&euro;/mois soit 4 080&euro;/an</div><div class="fdesc">Detecte: aucune connexion depuis 45 jours &middot; Action: resilier avant le 15/04</div></div></div>
+<div class="fw"><div class="fic">5</div><div class="fb"><div class="ftt">Frais deplacements +30% vs secteur</div><div class="fdesc">Regrouper visites par zone &middot; Economie: 1 200&euro;/trimestre = 4 800&euro;/an</div></div></div>
+<div class="fw"><div class="fic">6</div><div class="fb"><div class="ftt">Mutuelle Malakoff &mdash; renouvellement juillet</div><div class="fdesc">Mise en concurrence recommandee &middot; Economie potentielle 15-20% = 1 224&euro;/an</div></div></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">&#128994; OPPORTUNITES &mdash; Moyen terme</div>
+<div class="fs"><div class="fic">7</div><div class="fb"><div class="ftt">CIR 2026 estime a 7 200&euro;</div><div class="fdesc">Dossier a constituer avant le 31/05 &middot; Remboursement si IS &lt; CIR</div></div></div>
+<div class="fs"><div class="fic">8</div><div class="fb"><div class="ftt">Tresorerie excedentaire Q4 projete: ~110 000&euro;</div><div class="fdesc">Placement DAT 3 mois &middot; Rendement estime 3.5% = 962&euro;</div></div></div>
+<div class="fs"><div class="fic">9</div><div class="fb"><div class="ftt">Escompte Schneider Electric disponible (2%)</div><div class="fdesc">Paiement a 10j au lieu de 30j &middot; Economie 178&euro; sur 8 900&euro;</div></div></div>
+</div>
+</div>
+</div>
+
+<!-- TRESORERIE -->
+<div id="p-treso" class="panel">
+<div class="topbar"><div class="pt">Tresorerie &mdash; Temps reel</div><div class="tb-r"><select class="sel"><option>BNP Paribas &mdash; Compte courant</option></select><button class="btn">+ Ajouter banque</button></div></div>
+<div class="content">
+<div style="background:linear-gradient(135deg,#1E293B,#334155);border-radius:var(--rad2);padding:1.25rem;margin-bottom:1rem;color:#fff">
+<div style="font-size:11px;opacity:.6;margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Solde bancaire actuel &mdash; BNP Paribas</div>
+<div style="font-size:36px;font-weight:800;margin-bottom:4px">42 300,00 &euro;</div>
+<div style="font-size:12px;opacity:.6">Derniere sync: 03/04/2026 a 14h32 &middot; <span style="color:#4ADE80">&#9679; Connecte</span></div>
+<div style="display:flex;gap:2rem;margin-top:.875rem">
+<div><div style="font-size:10.5px;opacity:.5">Entrees ce mois</div><div style="font-size:16px;font-weight:700;color:#4ADE80">+27 600&euro;</div></div>
+<div><div style="font-size:10.5px;opacity:.5">Sorties ce mois</div><div style="font-size:16px;font-weight:700;color:#F87171">-3 990&euro;</div></div>
+<div><div style="font-size:10.5px;opacity:.5">Solde projete fin mois</div><div style="font-size:16px;font-weight:700;color:#FCD34D">52 253&euro;</div></div>
+</div>
+</div>
+<div class="fw"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">Pic de decaissement prevu le 05/04 (TVA 7 880&euro; + RAS 861&euro; + Legrand 2 450&euro;) = 11 191&euro;</div><div class="fdesc">Solde apres: 31 109&euro; &middot; Au-dessus du seuil minimum (25 000&euro;) mais surveiller</div></div></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Derniers mouvements</div>
+<table><thead><tr><th>Date</th><th>Libelle</th><th>Categorie</th><th class="tr">Montant</th><th>Compte</th></tr></thead>
+<tbody>
+<tr><td>03/04</td><td>SFR BUSINESS</td><td><span class="tag tgy">Abonnement</span></td><td class="tr neg">-340&euro;</td><td class="mono">606xxx &#10003;</td></tr>
+<tr><td>01/04</td><td>VIR CLIENT 1</td><td><span class="tag tg">Encaissement</span></td><td class="tr pos">+9 600&euro;</td><td class="mono">411000 &#10003;</td></tr>
+<tr><td>31/03</td><td>PRLV URSSAF</td><td><span class="tag tw2">URSSAF</span></td><td class="tr neg">-3 240&euro;</td><td class="mono">431000 &#10003;</td></tr>
+<tr><td>28/03</td><td>VIR SALAIRES</td><td><span class="tag tb2">Salaires</span></td><td class="tr neg">-12 400&euro;</td><td class="mono">641100 &#10003;</td></tr>
+<tr style="background:var(--rb)"><td>26/03</td><td>VIR REF 2403261</td><td><span class="tag tr2">? Non identifie</span></td><td class="tr pos">+4 200&euro;</td><td class="mono">&mdash; &#9888;</td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<!-- PREVISION TRESORERIE -->
+<div id="p-prev-treso" class="panel">
+<div class="topbar"><div class="pt">Prevision tresorerie &mdash; 12 mois</div><div class="tb-r"><button class="btn" onclick="buildPrev()">Recalculer IA</button><button class="btn btn-p">Export</button></div></div>
+<div class="content">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Hypotheses <span class="ai">&#10022; Modifiables</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+<div><div class="ml" style="margin-bottom:3px">Croissance CA/mois</div><div style="display:flex;align-items:center;gap:6px"><input type="range" min="0" max="30" value="8" step="1" id="r-g" oninput="updH('g',this.value)"><span id="v-g" style="font-size:13px;font-weight:700;min-width:28px">8%</span></div></div>
+<div><div class="ml" style="margin-bottom:3px">Marge brute</div><div style="display:flex;align-items:center;gap:6px"><input type="range" min="40" max="90" value="72" step="1" id="r-m" oninput="updH('m',this.value)"><span id="v-m" style="font-size:13px;font-weight:700;min-width:28px">72%</span></div></div>
+<div><div class="ml" style="margin-bottom:3px">Charges fixes/mois</div><div style="display:flex;align-items:center;gap:6px"><input type="range" min="20000" max="60000" value="32000" step="500" id="r-f" oninput="updH('f',this.value)"><span id="v-f" style="font-size:13px;font-weight:700;min-width:55px">32 000&euro;</span></div></div>
+<div><div class="ml" style="margin-bottom:3px">Seuil alerte (&euro;)</div><div style="display:flex;align-items:center;gap:6px"><input type="range" min="5000" max="50000" value="20000" step="1000" id="r-s" oninput="updH('s',this.value)"><span id="v-s" style="font-size:13px;font-weight:700;min-width:45px">20k&euro;</span></div></div>
+</div></div>
+<div class="card"><table><thead><tr><th>Mois</th><th class="tr">CA prevu</th><th class="tr">Marge brute</th><th class="tr">Charges</th><th class="tr">Resultat</th><th class="tr">Tresorerie</th><th>Statut</th></tr></thead>
+<tbody id="prev-body"></tbody></table></div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Insights IA</div><div id="prev-insights"></div></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Resume annuel</div><div id="prev-summary"></div></div>
+</div>
+</div>
+</div>
+
+<!-- BILAN -->
+<div id="p-bilan" class="panel">
+<div class="topbar"><div class="pt">Bilan comptable</div><div class="tb-r"><button class="btn btn-p">Export Excel</button></div></div>
+<div class="content">
+<div class="g2">
+<div class="card"><div class="ch"><div class="ct">Actif</div><span class="tag tb2">287 400&euro;</span></div>
+<table><thead><tr><th>Poste</th><th class="tr">Brut</th><th class="tr">Amort.</th><th class="tr">Net N</th><th class="tr">N-1</th></tr></thead>
+<tbody>
+<tr class="sr"><td colspan="5">Actif immobilise</td></tr>
+<tr class="i1"><td>Immob. incorporelles</td><td class="tr">8 400</td><td class="tr neg">-1 680</td><td class="tr">6 720</td><td class="tr">3 200</td></tr>
+<tr class="i1"><td>Materiel IoT</td><td class="tr">28 000</td><td class="tr neg">-5 600</td><td class="tr">22 400</td><td class="tr">19 200</td></tr>
+<tr class="i1"><td>Materiel informatique</td><td class="tr">12 800</td><td class="tr neg">-1 707</td><td class="tr">11 093</td><td class="tr">7 800</td></tr>
+<tr class="subr"><td>Total immobilise</td><td class="tr">51 200</td><td class="tr neg">-9 200</td><td class="tr">42 000</td><td class="tr">31 600</td></tr>
+<tr class="sr"><td colspan="5">Actif circulant</td></tr>
+<tr class="i1"><td>Stocks</td><td class="tr">12 500</td><td class="tr">&mdash;</td><td class="tr">12 500</td><td class="tr">8 200</td></tr>
+<tr class="i1" style="background:var(--rb)"><td>Creances clients &#9876;</td><td class="tr">185 400</td><td class="tr neg">-6 800</td><td class="tr neg">178 600</td><td class="tr">142 000</td></tr>
+<tr class="i1"><td>TVA a recuperer</td><td class="tr">5 800</td><td class="tr">&mdash;</td><td class="tr">5 800</td><td class="tr">3 400</td></tr>
+<tr class="subr"><td>Total circulant</td><td class="tr">207 900</td><td class="tr neg">-6 800</td><td class="tr">201 100</td><td class="tr">155 400</td></tr>
+<tr class="sr"><td colspan="5">Disponibilites</td></tr>
+<tr class="i1"><td>Banque BNP Paribas</td><td class="tr">42 300</td><td class="tr">&mdash;</td><td class="tr pos">42 300</td><td class="tr">54 200</td></tr>
+<tr class="totr"><td>TOTAL ACTIF</td><td class="tr">303 400</td><td class="tr neg">-16 000</td><td class="tr" style="font-size:15px;font-weight:800">287 400</td><td class="tr">241 200</td></tr>
+</tbody></table>
+<div class="fd" style="margin-top:8px"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">23 800&euro; creances douteuses non provisionnees &mdash; provision 491000 requise</div><div class="fa"><button class="btn btn-sm btn-d">Creer provision auto</button></div></div></div>
+</div>
+<div class="card"><div class="ch"><div class="ct">Passif</div><span class="tag tg">287 400&euro;</span></div>
+<table><thead><tr><th>Poste</th><th class="tr">N</th><th class="tr">N-1</th><th class="tr">Var.</th></tr></thead>
+<tbody>
+<tr class="sr"><td colspan="4">Capitaux propres</td></tr>
+<tr class="i1"><td>Capital social</td><td class="tr">20 000</td><td class="tr">20 000</td><td class="tr neu">0</td></tr>
+<tr class="i1"><td>Report a nouveau</td><td class="tr">51 020</td><td class="tr">40 340</td><td class="tr pos">+10 680</td></tr>
+<tr class="i1"><td>Resultat YTD</td><td class="tr neg">-4 820</td><td class="tr">0</td><td class="tr neg">-4 820</td></tr>
+<tr class="subr"><td>Total CP</td><td class="tr pos">68 200</td><td class="tr">60 340</td><td class="tr pos">+7 860</td></tr>
+<tr class="sr"><td colspan="4">Dettes financieres</td></tr>
+<tr class="i1"><td>Emprunts LT</td><td class="tr">80 000</td><td class="tr">0</td><td class="tr neg">+80 000</td></tr>
+<tr class="i1"><td>Pret BNP (CT)</td><td class="tr">42 800</td><td class="tr">55 000</td><td class="tr pos">-12 200</td></tr>
+<tr class="subr"><td>Total dettes fin.</td><td class="tr">142 800</td><td class="tr">73 400</td><td class="tr neg">+69 400</td></tr>
+<tr class="sr"><td colspan="4">Dettes exploitation</td></tr>
+<tr class="i1"><td>Fournisseurs</td><td class="tr">48 200</td><td class="tr">58 400</td><td class="tr pos">-10 200</td></tr>
+<tr class="i1"><td>Dettes fiscales/soc.</td><td class="tr">21 600</td><td class="tr">38 200</td><td class="tr pos">-16 600</td></tr>
+<tr class="totr"><td>TOTAL PASSIF</td><td class="tr" style="font-size:15px;font-weight:800">287 400</td><td class="tr">239 400</td><td class="tr pos">+48 000</td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULTAT -->
+<div id="p-resultat" class="panel">
+<div class="topbar"><div class="pt">Compte de resultat</div><div class="tb-r"><div class="ps">01/01 &rarr; 30/04/2026</div><button class="btn btn-p" style="margin-left:8px">Export</button></div></div>
+<div class="content">
+<div class="fs"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Marge brute 72% &mdash; conforme SaaS/IoT &middot; Deficit structurel de lancement &middot; Breakeven prevu aout 2026</div></div></div>
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Resultat d'exploitation</div>
+<table><thead><tr><th>Poste</th><th class="tr">N (4 mois)</th><th class="tr">N-1</th><th class="tr">Var%</th></tr></thead>
+<tbody>
+<tr class="sr"><td colspan="4">Produits d'exploitation</td></tr>
+<tr class="i1"><td>Ventes de prestations</td><td class="tr pos">88 400</td><td class="tr">65 800</td><td class="tr pos">+34%</td></tr>
+<tr class="i1"><td>Subventions</td><td class="tr pos">12 000</td><td class="tr">8 000</td><td class="tr pos">+50%</td></tr>
+<tr class="subr"><td>Total produits</td><td class="tr pos">101 600</td><td class="tr">74 600</td><td class="tr pos">+36%</td></tr>
+<tr class="sr"><td colspan="4">Charges d'exploitation</td></tr>
+<tr class="i1"><td>Achats matieres</td><td class="tr neg">-24 800</td><td class="tr">-18 200</td><td class="tr neg">+36%</td></tr>
+<tr class="i1"><td>Services exterieurs</td><td class="tr neg">-18 400</td><td class="tr">-14 200</td><td class="tr neg">+30%</td></tr>
+<tr class="i1"><td>Charges de personnel</td><td class="tr neg">-55 980</td><td class="tr">-38 400</td><td class="tr neg">+46%</td></tr>
+<tr class="i1"><td>Amortissements</td><td class="tr neg">-3 840</td><td class="tr">-2 200</td><td class="tr neg">+75%</td></tr>
+<tr class="subr"><td>Total charges</td><td class="tr neg">-107 320</td><td class="tr">-75 100</td><td class="tr neg">+43%</td></tr>
+<tr class="totr"><td>REX</td><td class="tr neg" style="font-size:15px">-5 720</td><td class="tr neg">-500</td><td class="tr">&mdash;</td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Resultat financier et net</div>
+<table><tbody>
+<tr><td>Produits financiers</td><td class="tr pos">240</td></tr>
+<tr><td>Charges financieres</td><td class="tr neg">-1 840</td></tr>
+<tr class="subr"><td>Resultat financier</td><td class="tr neg">-1 600</td></tr>
+<tr><td>IS</td><td class="tr">2 500</td></tr>
+<tr class="totr"><td>Resultat net</td><td class="tr neg" style="font-size:16px;font-weight:800">-4 820</td></tr>
+</tbody></table>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem">
+<div style="text-align:center;padding:.75rem;background:var(--bb);border-radius:var(--rad)"><div style="font-size:11px;color:var(--bt)">Marge brute</div><div style="font-size:22px;font-weight:800;color:var(--bt)">72%</div></div>
+<div style="text-align:center;padding:.75rem;background:var(--rb);border-radius:var(--rad)"><div style="font-size:11px;color:var(--rt)">Marge nette</div><div style="font-size:22px;font-weight:800;color:var(--rt)">-5.5%</div></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RATIOS -->
+<div id="p-ratios" class="panel">
+<div class="topbar"><div class="pt">Ratios financiers &mdash; Analyse IA</div><div class="tb-r"><span class="tag tr2">3 ratios hors norme</span></div></div>
+<div class="content">
+<div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Liquidite et Solvabilite</div>
+<div class="rgrid">
+<div class="rc" style="border-color:var(--r)"><div class="rcn">Liquidite generale</div><div class="rcv" style="color:var(--r)">1.18</div><div class="rcb">Norme: &gt;1.5 &#9876;</div><div class="rb"><div class="rbf" style="width:39%;background:var(--r)"></div></div></div>
+<div class="rc"><div class="rcn">Liquidite reduite</div><div class="rcv" style="color:var(--a)">1.10</div><div class="rcb">Norme: &gt;1.0 &mdash; Limite</div><div class="rb"><div class="rbf" style="width:55%;background:var(--a)"></div></div></div>
+<div class="rc"><div class="rcn">Solvabilite generale</div><div class="rcv" style="color:var(--g)">1.31</div><div class="rcb">Norme: &gt;1.0 &mdash; OK &#10003;</div><div class="rb"><div class="rbf" style="width:78%;background:var(--g)"></div></div></div>
+</div>
+<div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin:.75rem 0">Rentabilite</div>
+<div class="rgrid">
+<div class="rc"><div class="rcn">Marge brute</div><div class="rcv" style="color:var(--b)">72%</div><div class="rcb">Benchmark SaaS: 60-80% &#10003;</div><div class="rb"><div class="rbf" style="width:72%;background:var(--b)"></div></div></div>
+<div class="rc"><div class="rcn">Taux EBE</div><div class="rcv" style="color:var(--g)">14.5%</div><div class="rcb">Objectif: &gt;15%</div><div class="rb"><div class="rbf" style="width:48%;background:var(--g)"></div></div></div>
+<div class="rc"><div class="rcn">ROE</div><div class="rcv" style="color:var(--r)">-7.1%</div><div class="rcb">Negatif &mdash; phase lancement</div><div class="rb"><div class="rbf" style="width:20%;background:var(--r)"></div></div></div>
+</div>
+<div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin:.75rem 0">Gestion du cycle</div>
+<div class="rgrid">
+<div class="rc" style="border-color:var(--r)"><div class="rcn">DSO &mdash; Delai clients</div><div class="rcv" style="color:var(--r)">81 jours</div><div class="rcb">Objectif: &lt;45 jours &#9876;</div><div class="rb"><div class="rbf" style="width:85%;background:var(--r)"></div></div></div>
+<div class="rc"><div class="rcn">DPO &mdash; Delai fournisseurs</div><div class="rcv" style="color:var(--g)">42 jours</div><div class="rcb">Objectif: 45-60 jours &#10003;</div><div class="rb"><div class="rbf" style="width:60%;background:var(--g)"></div></div></div>
+<div class="rc"><div class="rcn">Rotation stocks</div><div class="rcv" style="color:var(--a)">8.0x</div><div class="rcb">Objectif: &gt;10x</div><div class="rb"><div class="rbf" style="width:53%;background:var(--a)"></div></div></div>
+</div>
+<div class="fd"><div class="fic">&#9876;</div><div class="fb"><div class="ftt">DSO 81j &mdash; chaque jour de reduction libere 2 200&euro; de tresorerie</div><div class="fdesc">Action: relancer Andorno (17 040&euro;) + mettre en place acomptes 30% a commande</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('recovery')">Relancer</button></div></div></div>
+</div>
+</div>
+
+<!-- PAIE PARAMS -->
+<div id="p-paie-params" class="panel">
+<div class="topbar"><div class="pt">Parametrage paie</div><div class="tb-r"><span class="ai">&#10022; Taux 2026</span><button class="btn btn-p" style="margin-left:6px">Sauvegarder</button></div></div>
+<div class="content">
+<div class="g2">
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Informations entreprise</div>
+<div class="mrow"><div class="mlbl">Raison sociale</div><input type="text" value="Mon Entreprise SAS"></div>
+<div class="mrow"><div class="mlbl">SIRET</div><input type="text" placeholder="XXX XXX XXX XXXXX"></div>
+<div class="mrow"><div class="mlbl">Convention collective</div><select><option>Syntec (IDCC 1486)</option><option>Agriculture</option><option>Commerce</option></select></div>
+<div class="mrow"><div class="mlbl">SMIC 2026 (mensuel brut)</div><input type="number" value="1801.80"></div>
+<div class="mrow"><div class="mlbl">PMSS mensuel</div><input type="number" value="3864"></div>
+<div class="mrow"><div class="mlbl">Ticket restaurant (valeur faciale)</div><input type="number" value="11.38"></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.5rem">Taux cotisations modifiables</div>
+<div style="font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin:.6rem 0 .3rem">Part salariale</div>
+<div class="pr"><div class="prl">Assurance maladie<div class="prs">Compte 431200</div></div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-ms" value="0.40" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">Retraite CNAV<div class="prs">Plafonne 1x PMSS</div></div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-cnav" value="6.90" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">Agirc-Arrco T1</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-arr" value="3.15" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">CSG deductible</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-csg" value="6.80" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">CSG/CRDS non deductible</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-nd" value="2.90" step="0.01" style="width:65px">%</div></div>
+<div style="font-size:10.5px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.05em;margin:.6rem 0 .3rem">Part patronale</div>
+<div class="pr"><div class="prl">Assurance maladie pat.</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-msp" value="13.00" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">CNAV patronale</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-cnavp" value="8.55" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">Chomage patronal</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-cho" value="4.05" step="0.01" style="width:65px">%</div></div>
+<div class="pr"><div class="prl">Agirc-Arrco patronal</div><div style="display:flex;align-items:center;gap:4px"><input type="number" id="t-arrp" value="4.72" step="0.01" style="width:65px">%</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RUBRIQUES -->
+<div id="p-rubriques" class="panel">
+<div class="topbar"><div class="pt">Rubriques de paie</div><div class="tb-r"><button class="btn">+ Creer rubrique</button></div></div>
+<div class="content">
+<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Chaque rubrique est entierement modifiable &mdash; alerte si le net descend sous le SMIC</div></div></div>
+<div class="card">
+<div class="rh rr"><span>Code</span><span>Libelle</span><span>Base calcul</span><span>Taux</span><span>Plafond</span><span>Compte</span><span>Actif</span></div>
+<div class="rr"><span class="mono">1000</span><span><input class="ei" value="Salaire de base brut" style="font-weight:600"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Mensuel fixe</option></select></span><span>&#8212;</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="641100" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">1100</span><span><input class="ei" value="Heures sup. 25%"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Horaire x h</option></select></span><span><input class="ei" value="125" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="641200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">2000</span><span><input class="ei" value="Prime de performance"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Montant fixe</option></select></span><span>&#8212;</span><span><select style="font-size:11px;padding:2px;width:auto"><option>4x PMSS</option></select></span><span><input class="ei" value="641300" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">3100</span><span><input class="ei" value="Maladie salariale (0.40%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut total</option></select></span><span><input class="ei" value="0.40" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">3200</span><span><input class="ei" value="Retraite CNAV sal. (6.90%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut plafonne SS</option></select></span><span><input class="ei" value="6.90" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>1x PMSS</option></select></span><span><input class="ei" value="431300" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">3300</span><span><input class="ei" value="Agirc-Arrco sal. (3.15%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut plafonne SS</option></select></span><span><input class="ei" value="3.15" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>1x PMSS</option></select></span><span><input class="ei" value="431400" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">4100</span><span><input class="ei" value="CSG deductible (6.80%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>98.25% brut</option></select></span><span><input class="ei" value="6.80" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431500" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">4200</span><span><input class="ei" value="CSG/CRDS non deductible (2.90%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>98.25% brut</option></select></span><span><input class="ei" value="2.90" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431600" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr" style="background:var(--ab)"><span class="mono">7000</span><span><input class="ei" value="Retenue PAS" style="color:var(--at)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Net imposable</option></select></span><span style="color:var(--at)">Taux DGFIP</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Taux individuel</option></select></span><span><input class="ei" value="447200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">8000</span><span><input class="ei" value="Ticket restaurant (part patronale)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Nb jours x 6.83</option></select></span><span>60%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Max legal</option></select></span><span><input class="ei" value="647000" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+<div class="rr"><span class="mono">9000</span><span><input class="ei" value="Reduction Fillon"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Coeff x brut</option></select></span><span style="color:var(--g)">Auto IA</span><span><select style="font-size:11px;padding:2px;width:auto"><option>SMIC &lt;=1.6</option></select></span><span><input class="ei" value="649000" style="width:52px;font-family:monospace"></span><span><button class="tog" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
+</div>
+</div>
+</div>
+
+<!-- JOURNAL PAIE -->
+<div id="p-journal-paie" class="panel">
+<div class="topbar"><div class="pt">Journal de paie detaille</div><div class="tb-r"><button class="btn btn-p">Export comptable</button></div></div>
+<div class="content">
+<div class="mg mg3">
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400 &#8364;</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">6 780 &#8364;</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">19 180 &#8364;</div></div>
+</div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Journal mensuel &#8212; Avril 2026</div>
+<table><thead><tr><th>Employe</th><th class="tr">Brut</th><th class="tr">Charges sal.</th><th class="tr">Charges pat.</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th class="tr">Net paye</th></tr></thead>
+<tbody>
+<tr><td>Sophie Bertrand</td><td class="tr">3 800</td><td class="tr neg">755</td><td class="tr neg">1 683</td><td class="tr">3 045</td><td class="tr neg">335</td><td class="tr pos">2 950</td></tr>
+<tr><td>Mohamed Karim</td><td class="tr">2 900</td><td class="tr neg">576</td><td class="tr neg">1 285</td><td class="tr">2 325</td><td class="tr neg">186</td><td class="tr pos">2 251</td></tr>
+<tr><td>Lea Arnaud</td><td class="tr">2 200</td><td class="tr neg">437</td><td class="tr neg">975</td><td class="tr">1 763</td><td class="tr neg">88</td><td class="tr pos">1 708</td></tr>
+<tr><td>Thomas Dumas</td><td class="tr">3 500</td><td class="tr neg">695</td><td class="tr neg">1 551</td><td class="tr">2 804</td><td class="tr neg">252</td><td class="tr pos">2 718</td></tr>
+<tr class="subr"><td>TOTAL</td><td class="tr">12 400</td><td class="tr neg">2 463</td><td class="tr neg">5 494</td><td class="tr">9 937</td><td class="tr neg">861</td><td class="tr pos">9 627</td></tr>
+</tbody></table></div>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Ecritures comptables auto</div>
+<div style="background:var(--s3);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px">
+<div class="er"><span>641100</span><span>Salaires bruts avril</span><span class="pos">12 400</span><span>&#8212;</span></div>
+<div class="er"><span>641200</span><span>Charges patronales avril</span><span class="pos">6 780</span><span>&#8212;</span></div>
+<div class="er"><span>421000</span><span>Remunerations dues</span><span>&#8212;</span><span class="neg">9 627</span></div>
+<div class="er"><span>431000</span><span>Cotisations salariales</span><span>&#8212;</span><span class="neg">2 463</span></div>
+<div class="er"><span>437000</span><span>Cotisations patronales</span><span>&#8212;</span><span class="neg">6 780</span></div>
+<div class="er"><span>447200</span><span>PAS a reverser DGFIP</span><span>&#8212;</span><span class="neg">861</span></div>
+<div class="er" style="font-weight:700;border-top:1px solid var(--s4)"><span></span><span>TOTAL</span><span class="pos">19 180</span><span class="neg">19 180</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RELEVES -->
+<div id="p-releves" class="panel">
+<div class="topbar"><div class="pt">Releves bancaires &#8212; Archive</div><div class="tb-r"><button class="btn">+ Importer releve</button></div></div>
+<div class="content">
+<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Releves importes automatiquement depuis la banque &#8212; ecritures generees automatiquement</div></div></div>
+<div class="card" style="font-family:monospace;font-size:12.5px;line-height:2.2">
+<div style="color:var(--b);font-weight:700">&#128193; Releves BNP Paribas</div>
+<div style="padding-left:20px;border-left:1px solid var(--s4);margin-left:10px">
+<div style="color:var(--t2)">&#128193; 2024 (12 mois) &#8212; Archive</div>
+<div style="color:var(--t2)">&#128193; 2025 (12 mois) &#8212; Archive</div>
+<div style="color:var(--b)">&#128193; 2026
+<div style="padding-left:20px;border-left:1px solid var(--s4);margin-left:10px">
+<div><span style="color:var(--g)">&#128196; 01-Janvier 2026.pdf</span> <span class="tag tg">Comptabilise</span></div>
+<div><span style="color:var(--g)">&#128196; 02-Fevrier 2026.pdf</span> <span class="tag tg">Comptabilise</span></div>
+<div><span style="color:var(--g)">&#128196; 03-Mars 2026.pdf</span> <span class="tag tg">Comptabilise</span></div>
+<div><span style="color:var(--a)">&#128196; 04-Avril 2026.pdf</span> <span class="tag tw2">En cours &#8212; sync live</span></div>
+<div style="color:var(--t3)">&#128196; 05-Mai 2026.pdf &#8212; En attente</div>
+</div></div>
+</div></div>
+</div>
+</div>
+
+<!-- CHARGES -->
+<div id="p-charges" class="panel">
+<div class="topbar"><div class="pt">Charges patronales &#8212; Detail</div><div class="tb-r"><button class="btn btn-p">Export URSSAF</button></div></div>
+<div class="content">
+<div class="mg mg3">
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400 &#8364;</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">5 576 &#8364;</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">17 976 &#8364;</div></div>
+</div>
+<div class="card">
+<table><thead><tr><th>Cotisation</th><th>Taux</th><th class="tr">Sophie B.</th><th class="tr">Mohamed K.</th><th class="tr">Lea A.</th><th class="tr">Thomas D.</th><th class="tr">Total</th></tr></thead>
+<tbody>
+<tr><td>Maladie patronale</td><td>13%</td><td class="tr">494</td><td class="tr">377</td><td class="tr">286</td><td class="tr">455</td><td class="tr neg">1 612</td></tr>
+<tr><td>CNAV patronale</td><td>8.55%</td><td class="tr">325</td><td class="tr">248</td><td class="tr">188</td><td class="tr">299</td><td class="tr neg">1 060</td></tr>
+<tr><td>Chomage patronal</td><td>4.05%</td><td class="tr">154</td><td class="tr">117</td><td class="tr">89</td><td class="tr">142</td><td class="tr neg">502</td></tr>
+<tr><td>Agirc-Arrco pat.</td><td>4.72%</td><td class="tr">179</td><td class="tr">137</td><td class="tr">104</td><td class="tr">165</td><td class="tr neg">585</td></tr>
+<tr class="subr"><td colspan="2">TOTAL</td><td class="tr neg">1 152</td><td class="tr neg">879</td><td class="tr neg">667</td><td class="tr neg">1 061</td><td class="tr neg">3 759</td></tr>
+</tbody></table></div>
+<div class="fs"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Reduction Fillon applicable a Lea et Mohamed &#8212; economie 1 840 &#8364;/mois</div><div class="fa"><button class="btn btn-s btn-sm">Activer</button></div></div></div>
+</div>
+</div>
+
+<!-- MODALS -->
+<div class="mo" id="m-bdc">
+<div class="modal"><div class="mh">Nouveau bon de commande<span class="mc2" onclick="closeModal('m-bdc')">&times;</span></div>
+<div class="mrow"><div class="mlbl">Client</div><input type="text" placeholder="Nom du client"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="mrow"><div class="mlbl">N&#176; BC</div><input type="text" value="BC-2026-009"></div>
+<div class="mrow"><div class="mlbl">Date</div><input type="date"></div>
+</div>
+<div class="mrow"><div class="mlbl">Objet</div><textarea rows="2" placeholder="Description..."></textarea></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="mrow"><div class="mlbl">Montant HT (&#8364;)</div><input type="number" placeholder="0.00"></div>
+<div class="mrow"><div class="mlbl">TVA</div><select><option>20%</option><option>10%</option><option>0%</option></select></div>
+</div>
+<div style="display:flex;gap:7px;margin-top:.875rem"><button class="btn btn-p" style="flex:1" onclick="closeModal('m-bdc')">Creer le BC</button><button class="btn" onclick="closeModal('m-bdc')">Annuler</button></div>
+</div></div>
+
+<div class="mo" id="m-facture">
+<div class="modal"><div class="mh">Nouvelle facture<span class="mc2" onclick="closeModal('m-facture')">&times;</span></div>
+<div class="mrow"><div class="mlbl">Client</div><input type="text" placeholder="Nom du client"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="mrow"><div class="mlbl">N&#176; facture</div><input type="text" value="FA-2026-043"></div>
+<div class="mrow"><div class="mlbl">BC origine</div><input type="text" placeholder="BC-2026-xxx"></div>
+</div>
+<div class="mrow"><div class="mlbl">Description</div><textarea rows="2" placeholder="Description de la prestation..."></textarea></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div class="mrow"><div class="mlbl">Montant HT (&#8364;)</div><input type="number" placeholder="0.00"></div>
+<div class="mrow"><div class="mlbl">TVA</div><select><option>20%</option><option>10%</option><option>0%</option></select></div>
+</div>
+<div style="display:flex;gap:7px;margin-top:.875rem"><button class="btn btn-p" style="flex:1" onclick="closeModal('m-facture')">Creer et envoyer</button><button class="btn" onclick="closeModal('m-facture')">Annuler</button></div>
+</div></div>
+
+<div class="mo" id="m-relance">
+<div class="modal"><div class="mh">Mail de relance &#8212; IA<span class="mc2" onclick="closeModal('m-relance')">&times;</span></div>
+<div style="display:flex;gap:6px;margin-bottom:.875rem">
+<button class="btn" id="rb-r1" onclick="setRel('r1')" style="background:var(--bb);color:var(--bt)">R1 &#8212; Cordial</button>
+<button class="btn" id="rb-r2" onclick="setRel('r2')">R2 &#8212; Ferme</button>
+<button class="btn" id="rb-r3" onclick="setRel('r3')">R3 &#8212; Mise en demeure</button>
+</div>
+<div class="mrow"><div class="mlbl">Objet</div><input type="text" id="rel-obj" value="Rappel facture FA-2026-040 &#8212; 17 040&#8364;"></div>
+<div class="mrow"><div class="mlbl">Corps <span class="ai">&#10022; IA</span></div>
+<textarea id="rel-body" rows="6">Bonjour M. Andorno,
+
+Je vous contacte au sujet de la facture FA-2026-040 (17 040 EUR TTC) echeue le 01/04/2026.
+Pourriez-vous confirmer la date de reglement prevue?
+
+Cordialement, La comptabilite</textarea></div>
+<div style="display:flex;gap:7px;margin-top:.875rem"><button class="btn btn-p" style="flex:1" onclick="closeModal('m-relance')">Envoyer</button><button class="btn" onclick="closeModal('m-relance')">Annuler</button></div>
+</div></div>
+
+<div class="mo" id="m-lr">
+<div class="modal"><div class="mh">Lettre recommandee AR24<span class="mc2" onclick="closeModal('m-lr')">&times;</span></div>
+<div class="mrow"><div class="mlbl">Type</div><select><option>LR1 &#8212; Mise en demeure</option><option>LR2 &#8212; Sommation</option><option>LR3 &#8212; Pre-contentieuse</option></select></div>
+<div class="mrow"><div class="mlbl">Montant</div><input type="text" value="7 800 EUR + 156 EUR interets = 7 956 EUR"></div>
+<div class="mrow"><div class="mlbl">Delai de reponse</div><select><option>15 jours</option><option>8 jours</option><option>30 jours</option></select></div>
+<div style="display:flex;gap:7px;margin-top:.875rem"><button class="btn btn-pu" style="flex:1" onclick="closeModal('m-lr')">Envoyer via AR24</button><button class="btn" onclick="closeModal('m-lr')">Annuler</button></div>
+</div></div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// NAVIGATION
+function go(id){
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+  document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('active')});
+  var p=document.getElementById('p-'+id);
+  if(p){p.classList.add('active');window.scrollTo(0,0);}
+  document.querySelectorAll('.ni').forEach(function(n){
+    var oc=n.getAttribute('onclick')||'';
+    if(oc.indexOf("'"+id+"'")>-1) n.classList.add('active');
+  });
+}
+
+// TABS
+function showTab(g,id){
+  document.querySelectorAll('[id^="'+g+'-tabs"] .tab').forEach(function(t){t.classList.remove('active')});
+  var tabsEl=document.getElementById(g+'-tabs');
+  if(tabsEl) tabsEl.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('.tc').forEach(function(t){
+    if(t.id&&t.id.indexOf(g+'-')===0) t.classList.remove('active');
+  });
+  var el=document.getElementById(g+'-'+id);
+  if(el) el.classList.add('active');
+  if(tabsEl) tabsEl.querySelectorAll('.tab').forEach(function(t){
+    if((t.getAttribute('onclick')||'').indexOf("'"+id+"'")>-1) t.classList.add('active');
+  });
+}
+
+// MODALS
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.mo').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open')});
+});
+
+// OCR
+function doOCR(){
+  var upz=document.getElementById('upz');
+  var loading=document.getElementById('ocr-loading');
+  var result=document.getElementById('ocr-result');
+  if(upz) upz.style.display='none';
+  if(loading) loading.style.display='block';
+  setTimeout(function(){
+    if(loading) loading.style.display='none';
+    if(result) result.style.display='block';
+  },1800);
+}
+function doEcriture(){var e=document.getElementById('ecriture-card');if(e)e.style.display='block';}
+function doLettrage(){var e=document.getElementById('lettrage-ok');if(e)e.style.display='block';}
+function toggleEl(id){var e=document.getElementById(id);if(e)e.style.display=e.style.display==='none'||!e.style.display?'block':'none';}
+
+// RELANCE MAIL
+var relTpl={
+  r1:{obj:"Rappel facture FA-2026-040",body:"Bonjour M. Andorno,\n\nJe vous contacte au sujet de la facture FA-2026-040 (17 040 EUR TTC) echeue le 01/04/2026.\nPourriez-vous confirmer la date de reglement prevue?\n\nCordialement, La comptabilite"},
+  r2:{obj:"2eme relance - Facture FA-2026-040 impayee",body:"Bonjour M. Andorno,\n\nMalgre notre premier rappel, la facture FA-2026-040 de 17 040 EUR reste impayee.\nNous vous demandons de regler sous 8 jours faute de quoi des procedures seront engagees.\n\nCordialement"},
+  r3:{obj:"MISE EN DEMEURE - Facture FA-2026-040",body:"Monsieur,\n\nNous vous mettons en DEMEURE de regler la facture FA-2026-040 de 17 040 EUR + interets sous 15 jours.\nPasse ce delai une procedure judiciaire sera engagee sans autre avis."}
+};
+function setRel(type){
+  ['r1','r2','r3'].forEach(function(k){var b=document.getElementById('rb-'+k);if(b){b.style.background='';b.style.color=''}});
+  var b=document.getElementById('rb-'+type);
+  if(b){b.style.background='var(--bb)';b.style.color='var(--bt)'}
+  var t=relTpl[type];
+  if(!t) return;
+  var obj=document.getElementById('rel-obj');var bod=document.getElementById('rel-body');
+  if(obj) obj.value=t.obj;
+  if(bod) bod.value=t.body;
+}
+
+// TOGGLES
+document.querySelectorAll('.tog').forEach(function(t){
+  t.addEventListener('click',function(){
+    this.classList.toggle('on');
+    var k=this.querySelector('.togk');
+    if(k) k.style.left=this.classList.contains('on')?'17px':'2px';
+  });
+});
+
+// PAIE ENGINE
+var PMSS=3864, SMIC_NET=1383;
+var emps={
+  sb:{name:'Sophie Bertrand',role:'Resp. commerciale - CDI - Syntec',av:'SB',cls:'avb',brut:3800,pas:11},
+  mk:{name:'Mohamed Karim',role:'Technicien - CDI',av:'MK',cls:'avg',brut:2900,pas:8},
+  la:{name:'Lea Arnaud',role:'Assistante - CDD',av:'LA',cls:'ava',brut:2200,pas:5},
+  td:{name:'Thomas Dumas',role:'Developpeur - CDI - Syntec',av:'TD',cls:'avp',brut:3500,pas:9}
+};
+function setEmp(btn,key){
+  document.querySelectorAll('[id^="e-"]').forEach(function(b){b.style.background='';b.style.color='';});
+  btn.style.background='var(--bb)';btn.style.color='var(--bt)';
+  var e=emps[key];
+  var av=document.getElementById('b-av');var nm=document.getElementById('b-name');var ro=document.getElementById('b-role');
+  var ib=document.getElementById('i-brut');var ip=document.getElementById('i-pas');
+  if(av){av.textContent=e.av;av.className='av '+e.cls;}
+  if(nm) nm.textContent=e.name;
+  if(ro) ro.textContent=e.role;
+  if(ib) ib.value=e.brut;
+  if(ip) ip.value=e.pas;
+  calcPaie();
+}
+function fmt(n){return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' EUR';}
+function calcPaie(){
+  var brut=parseFloat((document.getElementById('i-brut')||{value:3800}).value)||3800;
+  var prime=parseFloat((document.getElementById('i-prime')||{value:0}).value)||0;
+  var pas_t=parseFloat((document.getElementById('i-pas')||{value:11}).value)||0;
+  var tr_j=parseFloat((document.getElementById('i-tr')||{value:21}).value)||0;
+  var abs=parseFloat((document.getElementById('i-abs')||{value:0}).value)||0;
+  var bt=brut+prime-(abs>0?brut/21.67*abs:0);
+  var bp=Math.min(bt,PMSS);
+  var bcsg=bt*0.9825;
+  var ms_s=bt*0.004;
+  var cnav_s=bp*0.069;
+  var arr_s=bp*0.0315;
+  var csg_d=bcsg*0.068;
+  var csg_nd=bcsg*0.029;
+  var net_imp=bt-ms_s-cnav_s-arr_s-csg_d;
+  var pas=net_imp*(pas_t/100);
+  var tr_val=tr_j*11.38*0.6;
+  var net=net_imp-csg_nd-pas+tr_val;
+  var charges=bt*0.13+bp*0.0855+bt*0.0405+bt*0.005+bp*0.0472+68.22;
+  var cout=bt+charges;
+  var ratio=Math.round(net/bt*100);
+  var rows=[
+    {l:'Salaire brut de base',b:fmt(brut),m:fmt(brut),c:'pos'},
+  ];
+  if(prime>0) rows.push({l:'Prime',b:'—',m:'+'+fmt(prime),c:'pos'});
+  if(abs>0) rows.push({l:'Absence ('+abs+'j)',b:'—',m:'- '+fmt(brut/21.67*abs),c:'neg'});
+  rows.push({l:'Brut total',b:'',m:fmt(bt),c:'pos',bold:true});
+  rows.push({l:'- Maladie sal. (0.40%)',b:fmt(bt),m:'- '+fmt(ms_s),c:'neg'});
+  rows.push({l:'- CNAV sal. (6.90%)',b:fmt(bp)+' plaf.',m:'- '+fmt(cnav_s),c:'neg'});
+  rows.push({l:'- Agirc-Arrco (3.15%)',b:fmt(bp),m:'- '+fmt(arr_s),c:'neg'});
+  rows.push({l:'- CSG deductible (6.80%)',b:'98.25% brut',m:'- '+fmt(csg_d),c:'neg'});
+  rows.push({l:'Net avant impot',b:'',m:fmt(net_imp),c:'',bold:true});
+  rows.push({l:'- CSG/CRDS (2.90%)',b:fmt(bcsg),m:'- '+fmt(csg_nd),c:'neg'});
+  rows.push({l:'- Retenue PAS ('+pas_t+'%)',b:fmt(net_imp),m:'- '+fmt(pas),c:'neg'});
+  if(tr_j>0) rows.push({l:'+ Ticket restaurant ('+tr_j+'j)',b:'',m:'+ '+fmt(tr_val),c:'pos'});
+  rows.push({l:'NET A PAYER',b:'',m:fmt(net),c:net<SMIC_NET?'neg':'pos',bold:true});
+  var html='';
+  rows.forEach(function(r){
+    html+='<tr><td'+(r.bold?' style="font-weight:700"':'')+'>'+r.l+'</td><td class="tr" style="font-size:11px;color:var(--t3)">'+r.b+'</td><td class="tr '+r.c+'">'+r.m+'</td></tr>';
+  });
+  var pr=document.getElementById('paie-rows');if(pr) pr.innerHTML=html;
+  function setT(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+  setT('r-brut',fmt(bt));
+  setT('r-charges','+ '+fmt(charges));
+  setT('r-cout',fmt(cout));
+  setT('r-netimpot',fmt(net_imp));
+  setT('r-pas','- '+fmt(pas));
+  setT('r-net',fmt(net));
+  setT('r-ratio',ratio+'%');
+  var rb=document.getElementById('r-bar');if(rb) rb.style.width=Math.min(ratio,100)+'%';
+  setT('r-bar-lbl','Net = '+ratio+'% du brut');
+  var fl=document.getElementById('flag-smic');if(fl) fl.style.display=net<SMIC_NET?'flex':'none';
+  var flags='';
+  if(bt<=2900&&bt>=1800) flags='<div class="fs" style="margin-bottom:7px"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Reduction Fillon applicable — economie patronale '+fmt(Math.max(0,(2900-bt)*0.28))+'</div></div></div>';
+  var af=document.getElementById('ai-paie-flags');if(af) af.innerHTML=flags;
+}
+
+// PREVISION TRESORERIE
+var months=['Mai 26','Jun 26','Jul 26','Aou 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Fev 27','Mar 27','Avr 27'];
+var hyp={g:8,m:72,f:32000,s:20000};
+function updH(k,v){
+  hyp[k]=parseFloat(v);
+  var disp={g:v+'%',m:v+'%',f:Number(v).toLocaleString('fr-FR')+'&#8364;',s:(v/1000).toFixed(0)+'k&#8364;'};
+  var el=document.getElementById('v-'+k);if(el) el.innerHTML=disp[k];
+  buildPrev();
+}
+function buildPrev(){
+  var ca=48400,treso=42300,totalCA=0,totalRN=0,be=null;
+  var rows='';
+  months.forEach(function(m,i){
+    ca*=(1+hyp.g/100);
+    var mb=ca*hyp.m/100;
+    var rn=mb-hyp.f;
+    treso+=rn*0.7;
+    totalCA+=ca;totalRN+=rn;
+    if(rn>0&&!be) be=m;
+    var cls=rn>=0?'pos':'neg';
+    var sign=rn>=0?'+':'';
+    var warn=treso<hyp.s;
+    var st=rn>=0?'<span class="tag tg">Positif</span>':'<span class="tag tr2">Deficit</span>';
+    rows+='<tr'+(warn?' style="background:var(--rb)"':'')+'><td>'+m+'</td><td class="tr">'+Math.round(ca).toLocaleString('fr-FR')+' &#8364;</td><td class="tr pos">'+Math.round(mb).toLocaleString('fr-FR')+' &#8364;</td><td class="tr neg">- '+Math.round(hyp.f).toLocaleString('fr-FR')+' &#8364;</td><td class="tr '+cls+'">'+sign+Math.round(rn).toLocaleString('fr-FR')+' &#8364;</td><td class="tr '+(warn?'neg':'pos')+'">'+(warn?'<b>':'')+Math.round(treso).toLocaleString('fr-FR')+' &#8364;'+(warn?'</b> <span class="tag tr2">&#9888;</span>':'')+'</td><td>'+st+'</td></tr>';
+  });
+  var pb=document.getElementById('prev-body');if(pb) pb.innerHTML=rows;
+  var ins='';
+  if(be) ins+='<div class="fs" style="margin-bottom:7px"><div class="fic">&#10003;</div><div class="fb"><div class="ftt">Breakeven prevu : '+be+'</div><div class="fdesc">Premier mois rentable avec les hypotheses actuelles</div></div></div>';
+  if(hyp.g<5) ins+='<div class="fw"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">Croissance '+hyp.g+'% insuffisante pour atteindre le breakeven dans les 12 mois</div></div></div>';
+  if(!ins) ins='<div class="fs"><div class="fic">&#10003;</div><div class="fb"><div class="ftt">Projection saine sur 12 mois</div></div></div>';
+  var pi=document.getElementById('prev-insights');if(pi) pi.innerHTML=ins;
+  var ps_html='<div style="display:flex;flex-direction:column;gap:7px">'
+    +'<div style="display:flex;justify-content:space-between;padding:8px;background:var(--s3);border-radius:var(--rad)"><span style="color:var(--t2)">CA annuel projete</span><span style="font-weight:700;color:var(--b)">'+Math.round(totalCA).toLocaleString('fr-FR')+' &#8364;</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:8px;background:var(--s3);border-radius:var(--rad)"><span style="color:var(--t2)">Resultat cumule</span><span style="font-weight:700;color:'+(totalRN>=0?'var(--g)':'var(--r)')+'">'+(totalRN>=0?'+':'')+Math.round(totalRN).toLocaleString('fr-FR')+' &#8364;</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:8px;background:var(--s3);border-radius:var(--rad)"><span style="color:var(--t2)">Tresorerie finale</span><span style="font-weight:700;color:'+(treso>0?'var(--g)':'var(--r)')+'">'+Math.round(treso).toLocaleString('fr-FR')+' &#8364;</span></div>'
+    +'<div style="display:flex;justify-content:space-between;padding:8px;background:var(--bb);border-radius:var(--rad)"><span style="color:var(--bt)">Breakeven</span><span style="font-weight:700;color:var(--b)">'+(be||'Non atteint')+'</span></div>'
+    +'</div>';
+  var ps=document.getElementById('prev-summary');if(ps) ps.innerHTML=ps_html;
+}
+
+// INIT
+calcPaie();
+buildPrev();
+</script>
+
+<script>
+// ══════════════════════════════════════════════
+// BRAS DROIT — Couche API (frontend ↔ backend)
+// ══════════════════════════════════════════════
+
+const API_URL = 'https://brasdroit-api.onrender.com'; // Changer après déploiement Render
+let _token = localStorage.getItem('bd_token') || null;
+let _user = JSON.parse(localStorage.getItem('bd_user') || 'null');
+
+// ── Helpers ──
+async function apiCall(method, endpoint, body = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const resp = await fetch(API_URL + endpoint, opts);
+    if (resp.status === 401) { logout(); return null; }
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showToast(err.detail || 'Erreur serveur', 'error');
+      return null;
+    }
+    return await resp.json();
+  } catch (e) {
+    showToast('Connexion impossible au serveur', 'error');
+    return null;
+  }
+}
+
+const api = {
+  get:    (ep)       => apiCall('GET',    ep),
+  post:   (ep, body) => apiCall('POST',   ep, body),
+  patch:  (ep, body) => apiCall('PATCH',  ep, body),
+  delete: (ep)       => apiCall('DELETE', ep),
+};
+
+// ── Auth ──
+async function login(email, password) {
+  const resp = await fetch(API_URL + '/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ username: email, password: password })
+  });
+  if (!resp.ok) { showToast('Email ou mot de passe incorrect', 'error'); return false; }
+  const data = await resp.json();
+  _token = data.access_token;
+  _user = data;
+  localStorage.setItem('bd_token', _token);
+  localStorage.setItem('bd_user', JSON.stringify(_user));
+  document.getElementById('sf-company').textContent = data.entreprise_nom;
+  return true;
+}
+
+function logout() {
+  _token = null; _user = null;
+  localStorage.removeItem('bd_token');
+  localStorage.removeItem('bd_user');
+  showLoginModal();
+}
+
+async function register(email, password, prenom, nom, entreprise_nom) {
+  const data = await api.post('/api/auth/register', { email, password, prenom, nom, entreprise_nom });
+  if (!data) return false;
+  _token = data.access_token;
+  _user = data;
+  localStorage.setItem('bd_token', _token);
+  localStorage.setItem('bd_user', JSON.stringify(_user));
+  return true;
+}
+
+// ── Dashboard ──
+async function loadDashboard() {
+  const stats = await api.get('/api/dashboard/stats');
+  if (!stats) return;
+  setVal('dash-ca', fmtEur(stats.ca_mois));
+  setVal('dash-treso', fmtEur(stats.tresorerie));
+  setVal('dash-impayes', fmtEur(stats.impayes));
+  setVal('dash-alertes', stats.nb_alertes_urgentes);
+  const alertBanner = document.getElementById('dash-alert-banner');
+  if (alertBanner && stats.nb_alertes_urgentes > 0) {
+    alertBanner.style.display = 'flex';
+    document.getElementById('dash-alert-count').textContent = stats.nb_alertes_urgentes;
+  }
+}
+
+async function loadAlertes() {
+  const data = await api.get('/api/dashboard/alertes');
+  if (!data) return;
+  const container = document.getElementById('alertes-list');
+  if (!container) return;
+  container.innerHTML = data.alertes.map(a => `
+    <div class="dli ${a.severite === 'urgent' ? 'dl-urg' : 'dl-soon'}">
+      <div class="dld" style="color:${a.severite === 'urgent' ? 'var(--rt)' : 'var(--at)'}">${a.severite === 'urgent' ? 'URGENT' : 'J-15'}</div>
+      <div style="flex:1"><div class="dli-n">${a.titre}</div>
+      <div class="dli-s">${a.montant ? fmtEur(a.montant) : ''}</div></div>
+      ${a.action ? `<button class="btn btn-sm btn-d" onclick="apiRelancer(${a.action.split('/')[4]})">Traiter →</button>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Factures ──
+async function loadFactures() {
+  const data = await api.get('/api/facturation/factures');
+  if (!data) return;
+  const tbody = document.getElementById('factures-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = data.map(f => {
+    const cls = f.statut === 'reglee' ? 'tg' : f.statut === 'en_retard' ? 'tr2' : f.statut === 'judiciaire' ? 'tp' : 'tw2';
+    const label = {reglee:'Réglée', en_retard:'En retard', judiciaire:'Judiciaire', emise:'Émise', en_attente:'En attente'}[f.statut] || f.statut;
+    return `<tr>
+      <td><b>${f.numero}</b></td>
+      <td>${f.client_id}</td>
+      <td>${f.bc_origine || '—'}</td>
+      <td>${f.date_facture}</td>
+      <td class="tr">${fmtEur(f.montant_ht)}</td>
+      <td class="tr ${f.statut === 'en_retard' ? 'neg' : 'pos'}">${fmtEur(f.montant_ttc)}</td>
+      <td><span class="tag ${cls}">${label}</span></td>
+      <td>
+        ${f.statut !== 'reglee' ? `<button class="btn btn-sm btn-s" onclick="reglerFacture(${f.id})">✓</button>` : ''}
+        ${f.statut === 'en_retard' ? `<button class="btn btn-sm btn-d" onclick="relancerFacture(${f.id})">Relancer</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function creerFacture() {
+  const client_id = parseInt(prompt('ID Client:') || '0');
+  const montant_ht = parseFloat(prompt('Montant HT (€):') || '0');
+  const objet = prompt('Objet:') || '';
+  if (!client_id || !montant_ht) return;
+  const today = new Date().toISOString().split('T')[0];
+  const echeance = new Date(Date.now() + 30*86400000).toISOString().split('T')[0];
+  const data = await api.post('/api/facturation/factures', {
+    client_id, montant_ht, objet, date_facture: today, date_echeance: echeance
+  });
+  if (data) { showToast('Facture ' + data.numero + ' créée', 'success'); loadFactures(); }
+}
+
+async function reglerFacture(id) {
+  const data = await api.post('/api/facturation/factures/' + id + '/regler');
+  if (data) { showToast('Facture réglée ✓', 'success'); loadFactures(); }
+}
+
+async function relancerFacture(id, type = 'R1') {
+  const data = await api.post('/api/facturation/factures/' + id + '/relancer?type_relance=' + type);
+  if (data) {
+    showToast('Relance ' + type + ' générée par IA', 'success');
+    const m = document.getElementById('m-relance');
+    if (m) {
+      document.getElementById('rel-obj').value = data.relance.objet;
+      document.getElementById('rel-body').value = data.relance.corps;
+      m.classList.add('open');
+    }
+    loadFactures();
+  }
+}
+
+// ── Paie ──
+async function loadEmployes() {
+  const data = await api.get('/api/paie/employes');
+  if (!data) return;
+  const container = document.getElementById('employes-list');
+  if (!container) return;
+  const colors = ['avb','avg','ava','avp'];
+  container.innerHTML = data.map((e, i) => `
+    <div class="ec" onclick="selectEmploye(${e.id})">
+      <div class="av ${colors[i % 4]}">${e.prenom[0]}${e.nom[0]}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${e.prenom} ${e.nom}</div>
+        <div style="font-size:11px;color:var(--t2)">${e.poste || ''} · ${e.type_contrat}</div>
+      </div>
+      <span style="font-weight:600">${fmtEur(e.salaire_brut)}</span>
+    </div>
+  `).join('');
+}
+
+async function selectEmploye(id) {
+  const data = await api.post('/api/paie/bulletins/calculer', {
+    employe_id: id, mois: new Date().getMonth() + 1,
+    annee: new Date().getFullYear(), prime: 0,
+    heures_sup: 0, absences_jours: 0, tickets_resto_jours: 21
+  });
+  if (!data) return;
+  go('bulletin');
+  // Pré-remplir le bulletin avec les données de l'API
+  setVal('r-brut', fmtEur(data.brut_total));
+  setVal('r-net', fmtEur(data.net_a_payer));
+  setVal('r-cout', fmtEur(data.cout_employeur));
+  setVal('r-charges', '+ ' + fmtEur(data.charges_patronales));
+  if (data.flag_smic) document.getElementById('flag-smic').style.display = 'flex';
+}
+
+async function validerBulletin() {
+  const employe_id = parseInt(document.getElementById('i-emp-id')?.value || '0');
+  if (!employe_id) { showToast('Sélectionner un employé', 'error'); return; }
+  const mois = new Date().getMonth() + 1;
+  const annee = new Date().getFullYear();
+  const data = await api.post('/api/paie/bulletins/valider', {
+    employe_id, mois, annee,
+    prime: parseFloat(document.getElementById('i-prime')?.value || '0'),
+    heures_sup: parseFloat(document.getElementById('i-heure-sup')?.value || '0'),
+    absences_jours: parseFloat(document.getElementById('i-abs')?.value || '0'),
+    tickets_resto_jours: parseInt(document.getElementById('i-tr')?.value || '21'),
+  });
+  if (data) showToast('Bulletin validé et enregistré ✓', 'success');
+}
+
+// ── Question IA ──
+async function poserQuestionIA(question) {
+  const data = await api.post('/api/dashboard/ia/question', { question });
+  if (!data) return '';
+  return data.reponse;
+}
+
+// ── Utils ──
+function fmtEur(n) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 0}) + ' €';
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function showToast(msg, type = 'info') {
+  const colors = { success: 'var(--g)', error: 'var(--r)', info: 'var(--b)' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;background:${colors[type]};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2);animation:fadeIn .2s ease`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Login Modal ──
+function showLoginModal() {
+  let m = document.getElementById('m-login');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'm-login';
+    m.className = 'mo open';
+    m.innerHTML = `
+      <div class="modal" style="width:380px">
+        <div style="text-align:center;margin-bottom:1.25rem">
+          <div style="width:48px;height:48px;background:var(--b);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;margin:0 auto 8px">BD</div>
+          <div style="font-size:18px;font-weight:800">Bras Droit</div>
+          <div style="font-size:12px;color:var(--t2);margin-top:2px">Connectez-vous pour accéder à votre espace</div>
+        </div>
+        <div id="login-form">
+          <div class="mrow"><div class="mlbl">Email</div><input type="email" id="l-email" placeholder="vous@entreprise.com"></div>
+          <div class="mrow"><div class="mlbl">Mot de passe</div><input type="password" id="l-pwd" placeholder="••••••••"></div>
+          <button class="btn btn-p" style="width:100%;margin-top:.875rem;padding:10px" onclick="doLogin()">Se connecter →</button>
+          <div style="text-align:center;margin-top:.75rem;font-size:12px;color:var(--t2)">
+            Pas encore de compte ? <span style="color:var(--b);cursor:pointer;font-weight:600" onclick="showRegister()">Créer un compte</span>
+          </div>
+        </div>
+        <div id="register-form" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="mrow"><div class="mlbl">Prénom</div><input type="text" id="r-prenom"></div>
+            <div class="mrow"><div class="mlbl">Nom</div><input type="text" id="r-nom"></div>
+          </div>
+          <div class="mrow"><div class="mlbl">Email</div><input type="email" id="r-email"></div>
+          <div class="mrow"><div class="mlbl">Mot de passe</div><input type="password" id="r-pwd"></div>
+          <div class="mrow"><div class="mlbl">Nom de l'entreprise</div><input type="text" id="r-ent"></div>
+          <button class="btn btn-p" style="width:100%;margin-top:.875rem;padding:10px" onclick="doRegister()">Créer mon compte →</button>
+          <div style="text-align:center;margin-top:.75rem;font-size:12px;color:var(--t2)">
+            <span style="color:var(--b);cursor:pointer;font-weight:600" onclick="showLogin()">← Retour connexion</span>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+  } else {
+    m.classList.add('open');
+  }
+}
+
+function showRegister() {
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+}
+function showLogin() {
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('login-form').style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value;
+  const pwd = document.getElementById('l-pwd').value;
+  if (!email || !pwd) { showToast('Remplir email et mot de passe', 'error'); return; }
+  const ok = await login(email, pwd);
+  if (ok) {
+    document.getElementById('m-login').classList.remove('open');
+    loadDashboard();
+    showToast('Bienvenue ' + _user.prenom + ' !', 'success');
+  }
+}
+
+async function doRegister() {
+  const prenom = document.getElementById('r-prenom').value;
+  const nom = document.getElementById('r-nom').value;
+  const email = document.getElementById('r-email').value;
+  const pwd = document.getElementById('r-pwd').value;
+  const ent = document.getElementById('r-ent').value;
+  if (!prenom || !email || !pwd || !ent) { showToast('Tous les champs sont obligatoires', 'error'); return; }
+  const ok = await register(email, pwd, prenom, nom, ent);
+  if (ok) {
+    document.getElementById('m-login').classList.remove('open');
+    document.getElementById('sf-company').textContent = ent;
+    loadDashboard();
+    showToast('Compte créé ! Bienvenue ' + prenom, 'success');
+  }
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+  // Style animation toast
+  const style = document.createElement('style');
+  style.textContent = '@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+  document.head.appendChild(style);
+
+  if (!_token) {
+    showLoginModal();
+  } else {
+    // Token existant — charger les données
+    if (_user) document.getElementById('sf-company').textContent = _user.entreprise_nom || '';
+    loadDashboard();
+  }
+
+  // Charger les données au changement de panel
+  const originalGo = window.go;
+  window.go = function(id) {
+    originalGo(id);
+    if (id === 'factures') loadFactures();
+    if (id === 'employes') loadEmployes();
+    if (id === 'alertes') loadAlertes();
+    if (id === 'dashboard') loadDashboard();
+  };
+});
+
+</script>
+</body>
+</html>

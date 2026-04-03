@@ -1,0 +1,34 @@
+# render.yaml — Configuration de deploiement sur Render
+# Depose ce fichier a la racine du repo GitHub
+
+services:
+  # ── Backend FastAPI ──
+  - type: web
+    name: brasdroit-api
+    runtime: python
+    region: frankfurt        # Serveur en Europe (RGPD)
+    plan: free               # Gratuit pour demarrer
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: brasdroit-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true    # Render génère une clé sécurisée automatiquement
+      - key: FRONTEND_URL
+        value: https://brasdroit.vercel.app
+      - key: ANTHROPIC_API_KEY
+        sync: false            # A renseigner manuellement dans le dashboard Render
+
+  # ── Base de données PostgreSQL ──
+databases:
+  - name: brasdroit-db
+    databaseName: brasdroit
+    region: frankfurt
+    plan: free               # 90 jours gratuit, puis ~7$/mois
