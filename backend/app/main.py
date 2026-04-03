@@ -75,8 +75,23 @@ def debug_db():
         tables = db.execute(text(
             "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
         )).fetchall()
+        # Compter les lignes par table
+        counts = {}
+        for t in tables:
+            count = db.execute(text(f"SELECT COUNT(*) FROM {t[0]}")).scalar()
+            counts[t[0]] = count
+        # Foreign keys
+        fks = db.execute(text("""
+            SELECT tc.table_name, kcu.column_name, ccu.table_name AS foreign_table
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+            JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+            WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'
+            ORDER BY tc.table_name
+        """)).fetchall()
+        relations = [{"table": r[0], "column": r[1], "references": r[2]} for r in fks]
         db.close()
-        return {"db": "ok", "tables": [t[0] for t in tables]}
+        return {"db": "ok", "tables": counts, "relations": relations}
     except Exception as e:
         return {"db": "error", "detail": str(e)}
 
