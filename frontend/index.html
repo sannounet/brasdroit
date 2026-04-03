@@ -683,10 +683,10 @@ input[type=number]{-moz-appearance:textfield}
 <div class="topbar"><div class="pt">Dossiers employes</div><div class="tb-r"><button class="btn btn-p">+ Ajouter employe</button></div></div>
 <div class="content">
 <div class="mg mg4">
-<div class="mc"><div class="ml">Effectif total</div><div class="mv" style="color:var(--b)">4</div></div>
-<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400&euro;</div></div>
-<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">5 576&euro;</div></div>
-<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">17 976&euro;</div></div>
+<div class="mc"><div class="ml">Effectif total</div><div class="mv" style="color:var(--b)" id="emp-count">—</div></div>
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv" id="emp-masse">—</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg" id="emp-charges">—</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv" id="emp-cout">—</div></div>
 </div>
 <div class="g2">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Equipe</div><div id="employes-list">
@@ -792,12 +792,8 @@ input[type=number]{-moz-appearance:textfield}
 <div class="g2">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Recapitulatif DSN avril 2026</div>
 <table><thead><tr><th>Employe</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead>
-<tbody>
-<tr><td>Sophie Bertrand</td><td class="tr">3 800</td><td class="tr">3 045</td><td class="tr neg">335</td><td><span class="tag tg">OK</span></td></tr>
-<tr><td>Mohamed Karim</td><td class="tr">2 900</td><td class="tr">2 325</td><td class="tr neg">186</td><td><span class="tag tg">OK</span></td></tr>
-<tr><td>Lea Arnaud</td><td class="tr">2 200</td><td class="tr">1 763</td><td class="tr neg">88</td><td><span class="tag tg">OK</span></td></tr>
-<tr><td>Thomas Dumas</td><td class="tr">3 500</td><td class="tr">2 804</td><td class="tr neg">252</td><td><span class="tag tg">OK</span></td></tr>
-<tr class="subr"><td>TOTAL</td><td class="tr">12 400</td><td class="tr">9 937</td><td class="tr neg">861</td><td></td></tr>
+<tbody id="dsn-tbody">
+<tr><td colspan="5" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table></div>
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Statut declarations 2026</div>
 <div style="display:flex;flex-direction:column;gap:5px">
@@ -822,12 +818,8 @@ input[type=number]{-moz-appearance:textfield}
 <div class="g2">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">RAS Employes &mdash; Avril 2026</div>
 <table><thead><tr><th>Employe</th><th class="tr">Net imposable</th><th>Taux PAS</th><th class="tr">RAS</th></tr></thead>
-<tbody>
-<tr><td>S. Bertrand</td><td class="tr">3 045&euro;</td><td>11%</td><td class="tr neg">335&euro;</td></tr>
-<tr><td>M. Karim</td><td class="tr">2 325&euro;</td><td>8%</td><td class="tr neg">186&euro;</td></tr>
-<tr><td>L. Arnaud</td><td class="tr">1 763&euro;</td><td>5%</td><td class="tr neg">88&euro;</td></tr>
-<tr><td>T. Dumas</td><td class="tr">2 804&euro;</td><td>9%</td><td class="tr neg">252&euro;</td></tr>
-<tr class="subr"><td>Total</td><td class="tr">9 937&euro;</td><td></td><td class="tr neg">861&euro;</td></tr>
+<tbody id="ras-tbody">
+<tr><td colspan="4" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table></div>
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Recapitulatif annuel 2026</div>
 <table><thead><tr><th>Mois</th><th class="tr">Net imposable</th><th class="tr">RAS versee</th><th>Statut</th></tr></thead>
@@ -1247,8 +1239,8 @@ input[type=number]{-moz-appearance:textfield}
 <div class="content">
 <div class="g2">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Informations entreprise</div>
-<div class="mrow"><div class="mlbl">Raison sociale</div><input type="text" value="Mon Entreprise SAS"></div>
-<div class="mrow"><div class="mlbl">SIRET</div><input type="text" placeholder="XXX XXX XXX XXXXX"></div>
+<div class="mrow"><div class="mlbl">Raison sociale</div><input type="text" id="pp-nom" value=""></div>
+<div class="mrow"><div class="mlbl">SIRET</div><input type="text" id="pp-siret" value=""></div>
 <div class="mrow"><div class="mlbl">Convention collective</div><select><option>Syntec (IDCC 1486)</option><option>Agriculture</option><option>Commerce</option></select></div>
 <div class="mrow"><div class="mlbl">SMIC 2026 (mensuel brut)</div><input type="number" value="1801.80"></div>
 <div class="mrow"><div class="mlbl">PMSS mensuel</div><input type="number" value="3864"></div>
@@ -1298,18 +1290,14 @@ input[type=number]{-moz-appearance:textfield}
 <div class="topbar"><div class="pt">Journal de paie detaille</div><div class="tb-r"><button class="btn btn-p">Export comptable</button></div></div>
 <div class="content">
 <div class="mg mg3">
-<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400 &#8364;</div></div>
-<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">6 780 &#8364;</div></div>
-<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">19 180 &#8364;</div></div>
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv" id="jp-masse">—</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg" id="jp-charges">—</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv" id="jp-cout">—</div></div>
 </div>
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Journal mensuel &#8212; Avril 2026</div>
 <table><thead><tr><th>Employe</th><th class="tr">Brut</th><th class="tr">Charges sal.</th><th class="tr">Charges pat.</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th class="tr">Net paye</th></tr></thead>
-<tbody>
-<tr><td>Sophie Bertrand</td><td class="tr">3 800</td><td class="tr neg">755</td><td class="tr neg">1 683</td><td class="tr">3 045</td><td class="tr neg">335</td><td class="tr pos">2 950</td></tr>
-<tr><td>Mohamed Karim</td><td class="tr">2 900</td><td class="tr neg">576</td><td class="tr neg">1 285</td><td class="tr">2 325</td><td class="tr neg">186</td><td class="tr pos">2 251</td></tr>
-<tr><td>Lea Arnaud</td><td class="tr">2 200</td><td class="tr neg">437</td><td class="tr neg">975</td><td class="tr">1 763</td><td class="tr neg">88</td><td class="tr pos">1 708</td></tr>
-<tr><td>Thomas Dumas</td><td class="tr">3 500</td><td class="tr neg">695</td><td class="tr neg">1 551</td><td class="tr">2 804</td><td class="tr neg">252</td><td class="tr pos">2 718</td></tr>
-<tr class="subr"><td>TOTAL</td><td class="tr">12 400</td><td class="tr neg">2 463</td><td class="tr neg">5 494</td><td class="tr">9 937</td><td class="tr neg">861</td><td class="tr pos">9 627</td></tr>
+<tbody id="journal-paie-tbody">
+<tr><td colspan="7" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table></div>
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Ecritures comptables auto</div>
 <div style="background:var(--s3);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px">
@@ -1352,18 +1340,14 @@ input[type=number]{-moz-appearance:textfield}
 <div class="topbar"><div class="pt">Charges patronales &#8212; Detail</div><div class="tb-r"><button class="btn btn-p">Export URSSAF</button></div></div>
 <div class="content">
 <div class="mg mg3">
-<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">12 400 &#8364;</div></div>
-<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">5 576 &#8364;</div></div>
-<div class="mc"><div class="ml">Cout total employeur</div><div class="mv">17 976 &#8364;</div></div>
+<div class="mc"><div class="ml">Masse salariale brute</div><div class="mv" id="ch-masse">—</div></div>
+<div class="mc"><div class="ml">Charges patronales</div><div class="mv neg" id="ch-charges">—</div></div>
+<div class="mc"><div class="ml">Cout total employeur</div><div class="mv" id="ch-cout">—</div></div>
 </div>
 <div class="card">
-<table><thead><tr><th>Cotisation</th><th>Taux</th><th class="tr">Sophie B.</th><th class="tr">Mohamed K.</th><th class="tr">Lea A.</th><th class="tr">Thomas D.</th><th class="tr">Total</th></tr></thead>
-<tbody>
-<tr><td>Maladie patronale</td><td>13%</td><td class="tr">494</td><td class="tr">377</td><td class="tr">286</td><td class="tr">455</td><td class="tr neg">1 612</td></tr>
-<tr><td>CNAV patronale</td><td>8.55%</td><td class="tr">325</td><td class="tr">248</td><td class="tr">188</td><td class="tr">299</td><td class="tr neg">1 060</td></tr>
-<tr><td>Chomage patronal</td><td>4.05%</td><td class="tr">154</td><td class="tr">117</td><td class="tr">89</td><td class="tr">142</td><td class="tr neg">502</td></tr>
-<tr><td>Agirc-Arrco pat.</td><td>4.72%</td><td class="tr">179</td><td class="tr">137</td><td class="tr">104</td><td class="tr">165</td><td class="tr neg">585</td></tr>
-<tr class="subr"><td colspan="2">TOTAL</td><td class="tr neg">1 152</td><td class="tr neg">879</td><td class="tr neg">667</td><td class="tr neg">1 061</td><td class="tr neg">3 759</td></tr>
+<table><thead><tr><th>Employe</th><th class="tr">Brut</th><th class="tr">Charges pat.</th><th class="tr">Cout employeur</th></tr></thead>
+<tbody id="charges-pat-tbody">
+<tr><td colspan="4" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table></div>
 <div class="fs"><div class="fic">&#128161;</div><div class="fb"><div class="ftt">Reduction Fillon applicable a Lea et Mohamed &#8212; economie 1 840 &#8364;/mois</div><div class="fa"><button class="btn btn-s btn-sm">Activer</button></div></div></div>
 </div>
@@ -1805,6 +1789,13 @@ async function loadEmployes() {
       <span style="font-weight:600">${fmtEur(e.salaire_brut)}</span>
     </div>
   `).join('');
+  // Metrics
+  setVal('emp-count', data.length);
+  const totalBrut = data.reduce((s,e) => s + (e.salaire_brut||0), 0);
+  setVal('emp-masse', fmtEur(totalBrut));
+  const estCharges = totalBrut * 0.42;
+  setVal('emp-charges', fmtEur(estCharges));
+  setVal('emp-cout', fmtEur(totalBrut + estCharges));
 }
 
 async function selectEmploye(id) {
@@ -1976,7 +1967,7 @@ document.addEventListener('DOMContentLoaded', function() {
       'recovery': loadRecouvrement,
       'treso': loadTresorerie,
       'releves': loadReleves,
-      'charges': loadCharges,
+      'charges': loadChargesPatronales,
       'bilan': loadBilan,
       'resultat': loadResultat,
       'ratios': loadRatios,
@@ -1987,6 +1978,7 @@ document.addEventListener('DOMContentLoaded', function() {
       'ras': loadRAS,
       'budget': loadBudget,
       'journal-paie': loadJournalPaie,
+      'paie-params': loadPaieParams,
     };
     if (loaders[id]) loaders[id]();
   };
@@ -2121,6 +2113,36 @@ async function loadRecouvrement() {
   }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--g)">Aucun impayé ✓</td></tr>';
 }
 
+// ── Paie params ──
+async function loadPaieParams() {
+  if (!_user) return;
+  const el = document.getElementById('pp-nom');
+  if (el) el.value = _user.entreprise_nom || '';
+}
+
+// ── Charges patronales ──
+async function loadChargesPatronales() {
+  const now = new Date();
+  const mois = now.getMonth() || 12;
+  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const data = await api.get('/api/paie/bulletins/'+annee+'/'+mois);
+  if (!data) return;
+  const bulletins = data.bulletins || [];
+  let totalBrut=0,totalChPat=0,totalCout=0;
+  const tbody = document.getElementById('charges-pat-tbody');
+  if (tbody) {
+    tbody.innerHTML = bulletins.map(b => {
+      const brut = b.salaire_brut||0, chPat = b.cotis_patronales||0, cout = brut + chPat;
+      totalBrut+=brut; totalChPat+=chPat; totalCout+=cout;
+      return `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(chPat)}</td><td class="tr">${fmtEur(cout)}</td></tr>`;
+    }).join('');
+    if (bulletins.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(totalBrut)}</td><td class="tr neg">${fmtEur(totalChPat)}</td><td class="tr">${fmtEur(totalCout)}</td></tr>`;
+  }
+  setVal('ch-masse', fmtEur(totalBrut));
+  setVal('ch-charges', fmtEur(totalChPat));
+  setVal('ch-cout', fmtEur(totalCout));
+}
+
 // ── Trésorerie ──
 async function loadTresorerie() {
   const data = await api.get('/api/tresorerie/solde');
@@ -2152,16 +2174,7 @@ async function loadReleves() {
   }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucun mouvement ce mois</td></tr>';
 }
 
-// ── Charges annuelles ──
-async function loadCharges() {
-  const data = await api.get('/api/tresorerie/charges?annee='+new Date().getFullYear());
-  if (!data) return;
-  const tbody = document.querySelector('#p-charges table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = (data.categories||[]).map(c =>
-    `<tr><td>${c.categorie||'Autre'}</td><td class="tr neg">${fmtEur(Math.abs(c.total))}</td></tr>`
-  ).join('') || '<tr><td colspan="2" style="text-align:center;color:var(--t3)">Aucune charge</td></tr>';
-}
+// loadCharges moved to loadChargesPatronales above
 
 // ── Bilan ──
 async function loadBilan() {
@@ -2284,13 +2297,17 @@ async function loadDSN() {
   const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
   const data = await api.get('/api/declarations/dsn?annee='+annee+'&mois='+mois);
   if (!data) return;
-  const tbody = document.querySelector('#p-dsn table tbody');
+  const tbody = document.getElementById('dsn-tbody');
   if (!tbody) return;
-  tbody.innerHTML = (data.employes||[]).map(e =>
-    `<tr><td>${e.nom} ${e.prenom}</td><td>${e.type_contrat||''}</td>
-    <td class="tr">${fmtEur(e.salaire_brut)}</td><td class="tr">${fmtEur(e.net_a_payer)}</td>
-    <td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`
-  ).join('') || '<tr><td colspan="5">Aucun bulletin</td></tr>';
+  const emps = data.employes||[];
+  let totBrut=0,totNet=0,totPas=0;
+  tbody.innerHTML = emps.map(e => {
+    totBrut+=(e.salaire_brut||0); totNet+=(e.net_imposable||e.net_a_payer||0); totPas+=(e.retenue_pas||0);
+    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.salaire_brut)}</td>
+    <td class="tr">${fmtEur(e.net_imposable||e.net_a_payer)}</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td>
+    <td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`;
+  }).join('') || '<tr><td colspan="5">Aucun bulletin</td></tr>';
+  if (emps.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(totBrut)}</td><td class="tr">${fmtEur(totNet)}</td><td class="tr neg">${fmtEur(totPas)}</td><td></td></tr>`;
 }
 
 // ── RAS (PAS) ──
@@ -2300,14 +2317,16 @@ async function loadRAS() {
   const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
   const data = await api.get('/api/declarations/ras?annee='+annee+'&mois='+mois);
   if (!data) return;
-  const tbody = document.querySelector('#p-ras table tbody');
+  const tbody = document.getElementById('ras-tbody');
   if (!tbody) return;
-  tbody.innerHTML = (data.employes||data.detail||[]).map(e =>
-    `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.net_imposable||0)}</td>
-    <td class="tr">${(e.taux_pas||0).toFixed(1)}%</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td></tr>`
-  ).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
-  const totalEl = document.querySelector('#p-ras .mv');
-  if (totalEl) totalEl.textContent = fmtEur(data.total_pas||data.total||0);
+  const emps = data.employes||data.detail||[];
+  let totNet=0, totPas=0;
+  tbody.innerHTML = emps.map(e => {
+    totNet+=(e.net_imposable||0); totPas+=(e.retenue_pas||0);
+    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.net_imposable||0)}</td>
+    <td class="tr">${(e.taux_pas||0).toFixed(1)}%</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+  if (emps.length) tbody.innerHTML += `<tr class="subr"><td>Total</td><td class="tr">${fmtEur(totNet)}</td><td></td><td class="tr neg">${fmtEur(totPas)}</td></tr>`;
 }
 
 // ── Budget ──
@@ -2332,15 +2351,22 @@ async function loadJournalPaie() {
   const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
   const data = await api.get('/api/paie/bulletins/'+annee+'/'+mois);
   if (!data) return;
-  const tbody = document.querySelector('#p-journal-paie table tbody');
+  const tbody = document.getElementById('journal-paie-tbody');
   if (!tbody) return;
-  tbody.innerHTML = (data.bulletins||[]).map(b =>
-    `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(b.salaire_brut)}</td>
-    <td class="tr">${fmtEur(b.cotis_salariales||0)}</td><td class="tr">${fmtEur(b.cotis_patronales||0)}</td>
-    <td class="tr">${fmtEur(b.net_a_payer)}</td><td class="tr">${fmtEur(b.cout_employeur||0)}</td></tr>`
-  ).join('') || '<tr><td colspan="6">Aucun bulletin ce mois</td></tr>';
-  const totalEl = document.querySelector('#p-journal-paie .mv');
-  if (totalEl) totalEl.textContent = fmtEur(data.total_net||data.bulletins?.reduce((s,b)=>s+(b.net_a_payer||0),0)||0);
+  const bulletins = data.bulletins||[];
+  let tBrut=0,tCS=0,tCP=0,tNI=0,tPas=0,tNet=0;
+  tbody.innerHTML = bulletins.map(b => {
+    tBrut+=(b.salaire_brut||0); tCS+=(b.cotis_salariales||0); tCP+=(b.cotis_patronales||0);
+    tNI+=(b.net_imposable||0); tPas+=(b.retenue_pas||0); tNet+=(b.net_a_payer||0);
+    return `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(b.salaire_brut)}</td>
+    <td class="tr neg">${fmtEur(b.cotis_salariales||0)}</td><td class="tr neg">${fmtEur(b.cotis_patronales||0)}</td>
+    <td class="tr">${fmtEur(b.net_imposable||0)}</td><td class="tr neg">${fmtEur(b.retenue_pas||0)}</td>
+    <td class="tr pos">${fmtEur(b.net_a_payer)}</td></tr>`;
+  }).join('') || '<tr><td colspan="7">Aucun bulletin ce mois</td></tr>';
+  if (bulletins.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(tBrut)}</td><td class="tr neg">${fmtEur(tCS)}</td><td class="tr neg">${fmtEur(tCP)}</td><td class="tr">${fmtEur(tNI)}</td><td class="tr neg">${fmtEur(tPas)}</td><td class="tr pos">${fmtEur(tNet)}</td></tr>`;
+  setVal('jp-masse', fmtEur(tBrut));
+  setVal('jp-charges', fmtEur(tCP));
+  setVal('jp-cout', fmtEur(tBrut+tCP));
 }
 
 </script>
