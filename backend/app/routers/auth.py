@@ -17,34 +17,40 @@ router = APIRouter(prefix="/api/auth", tags=["Authentification"])
 @router.post("/register", response_model=TokenResponse, status_code=201)
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
     """Création d'un compte + entreprise."""
-    if db.query(User).filter(User.email == data.email).first():
-        raise HTTPException(status_code=400, detail="Email déjà utilisé")
-    
-    # Créer l'entreprise
-    entreprise = Entreprise(nom=data.entreprise_nom, siret=data.entreprise_siret)
-    db.add(entreprise)
-    db.flush()
-    
-    # Créer l'utilisateur admin
-    user = User(
-        email=data.email,
-        hashed_password=hash_password(data.password),
-        prenom=data.prenom,
-        nom=data.nom,
-        entreprise_id=entreprise.id,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    token = create_access_token({"sub": str(user.id)})
-    return TokenResponse(
-        access_token=token,
-        user_id=user.id,
-        prenom=user.prenom,
-        entreprise_id=entreprise.id,
-        entreprise_nom=entreprise.nom,
-    )
+    try:
+        if db.query(User).filter(User.email == data.email).first():
+            raise HTTPException(status_code=400, detail="Email déjà utilisé")
+
+        # Créer l'entreprise
+        entreprise = Entreprise(nom=data.entreprise_nom, siret=data.entreprise_siret)
+        db.add(entreprise)
+        db.flush()
+
+        # Créer l'utilisateur admin
+        user = User(
+            email=data.email,
+            hashed_password=hash_password(data.password),
+            prenom=data.prenom,
+            nom=data.nom,
+            entreprise_id=entreprise.id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        token = create_access_token({"sub": str(user.id)})
+        return TokenResponse(
+            access_token=token,
+            user_id=user.id,
+            prenom=user.prenom,
+            entreprise_id=entreprise.id,
+            entreprise_nom=entreprise.nom,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erreur register: {type(e).__name__}: {str(e)}")
 
 
 @router.post("/login", response_model=TokenResponse)
