@@ -28,9 +28,9 @@ app = FastAPI(
 # ── CORS — autorise Vercel et localhost ──
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_origins=[
         settings.FRONTEND_URL,
-        "https://brasdroit.vercel.app",
         "http://localhost:3000",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
