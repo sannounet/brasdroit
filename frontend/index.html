@@ -292,9 +292,9 @@ input[type=number]{-moz-appearance:textfield}
     <div class="ni" onclick="go('ratios')"><div class="ni-ic">&#9678;</div>Ratios financiers<span class="nb">3</span></div>
   </div>
   <div class="sf">
-    <div class="sf-c" id="sf-company">Mon Entreprise</div>
-    <div class="sf-p">Exercice 2026 &middot; PCG</div>
-    <div style="margin-top:4px"><span class="ai">&#10022; IA active</span></div>
+    <div class="sf-c" id="sf-company" style="cursor:pointer" onclick="go('profil')">Mon Entreprise</div>
+    <div class="sf-p"><select id="exercice-select" class="sel" style="width:100%;background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.2);font-size:11px;padding:3px 6px" onchange="changeExercice(this.value)"><option value="2026">Exercice 2026</option></select></div>
+    <div style="margin-top:4px;display:flex;gap:6px;align-items:center"><span class="ai">&#10022; IA active</span><span style="font-size:10px;color:rgba(255,255,255,.4);cursor:pointer" onclick="go('profil')">⚙ Profil</span></div>
   </div>
 </div>
 <div class="main">
@@ -1338,6 +1338,14 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 </div>
 
+<!-- PROFIL -->
+<div id="p-profil" class="panel">
+<div class="topbar"><div class="pt">Profil et paramètres</div><div class="tb-r"><button class="btn" onclick="go('dashboard')">← Retour dashboard</button></div></div>
+<div class="content" id="profil-content">
+<div style="text-align:center;color:var(--t3);padding:2rem">Chargement...</div>
+</div>
+</div>
+
 <!-- MODALS -->
 <div class="mo" id="m-export">
 <div class="modal" style="width:420px">
@@ -2162,6 +2170,7 @@ window._goLoaders = {
     'liasse': loadLiasse,
     'ecarts': loadEcarts,
     'optim': loadOptimisation,
+    'profil': loadProfil,
   };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -2454,7 +2463,7 @@ async function loadReleves() {
 
 // ── Bilan ──
 async function loadBilan() {
-  const annee = new Date().getFullYear()-1;
+  const annee = (window._exercice||new Date().getFullYear());
   const data = await api.get('/api/compta/bilan?annee='+annee);
   const c = document.querySelector('#p-bilan .content');
   if (!c||!data) return;
@@ -2483,7 +2492,7 @@ async function loadBilan() {
 
 // ── Compte de résultat ──
 async function loadResultat() {
-  const annee = new Date().getFullYear()-1;
+  const annee = (window._exercice||new Date().getFullYear());
   const data = await api.get('/api/compta/resultat?annee='+annee);
   const c = document.querySelector('#p-resultat .content');
   if (!c||!data) return;
@@ -2503,7 +2512,7 @@ async function loadResultat() {
 
 // ── Ratios ──
 async function loadRatios() {
-  const annee = new Date().getFullYear()-1;
+  const annee = (window._exercice||new Date().getFullYear());
   const data = await api.get('/api/compta/ratios?annee='+annee);
   const c = document.querySelector('#p-ratios .content');
   if (!c||!data) return;
@@ -2540,7 +2549,7 @@ async function loadTVA() {
 
 // ── IS ──
 async function loadIS() {
-  const annee = new Date().getFullYear()-1;
+  const annee = (window._exercice||new Date().getFullYear());
   const data = await api.get('/api/declarations/is?annee='+annee);
   const c = document.querySelector('#p-decl-is .content');
   if (!c||!data) return;
@@ -2680,7 +2689,7 @@ async function loadJudiciaire() {
 
 // ── Liasse fiscale ──
 async function loadLiasse() {
-  const annee = new Date().getFullYear()-1;
+  const annee = (window._exercice||new Date().getFullYear());
   const data = await api.get('/api/compta/liasse?annee='+annee);
   const c = document.querySelector('#p-liasse .content');
   if (!c||!data) return;
@@ -2737,15 +2746,146 @@ async function loadOptimisation() {
     ${html}` : '<div class="card" style="text-align:center;padding:2rem"><div style="font-size:14px;color:var(--g)">✓ Aucune optimisation suggérée — tout est optimal</div></div>';
 }
 
-// ── Paie params ── (enrichi)
-async function loadPaieParams() {
-  const data = await api.get('/api/entreprise');
-  if (!data) return;
-  const nom = document.getElementById('pp-nom');
-  const siret = document.getElementById('pp-siret');
-  if (nom) nom.value = data.nom || '';
-  if (siret) siret.value = data.siret || '';
+// ── Profil ──
+window.loadProfil = async function() {
+  const profil = await api.get('/api/entreprise/profil');
+  const ent = await api.get('/api/entreprise');
+  const exercices = await api.get('/api/entreprise/exercices');
+  const c = document.getElementById('profil-content');
+  if (!c) return;
+
+  const p = profil || {};
+  const e = ent || {};
+  const exList = (exercices && exercices.exercices) || [2026, 2025, 2024];
+
+  c.innerHTML = `
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:1rem">Mon compte</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem">
+          <div class="av avb" style="width:48px;height:48px;font-size:18px">${(p.prenom||'?')[0]}${(p.nom||'?')[0]}</div>
+          <div><div style="font-size:15px;font-weight:700">${p.prenom||''} ${p.nom||''}</div><div style="font-size:12px;color:var(--t2)">${p.email||''} · ${p.role||'admin'}</div></div>
+        </div>
+        <div class="mrow"><div class="mlbl">Prénom</div><input type="text" id="prof-prenom" value="${p.prenom||''}"></div>
+        <div class="mrow"><div class="mlbl">Nom</div><input type="text" id="prof-nom" value="${p.nom||''}"></div>
+        <div class="mrow"><div class="mlbl">Email</div><input type="email" id="prof-email" value="${p.email||''}"></div>
+        <button class="btn btn-p" style="width:100%;margin-top:.75rem" onclick="sauverProfil()">Sauvegarder le profil</button>
+        <div style="border-top:1px solid var(--s4);margin-top:1rem;padding-top:1rem">
+          <div class="ct" style="margin-bottom:.75rem">Changer le mot de passe</div>
+          <div class="mrow"><div class="mlbl">Ancien mot de passe</div><input type="password" id="prof-old-pwd"></div>
+          <div class="mrow"><div class="mlbl">Nouveau mot de passe</div><input type="password" id="prof-new-pwd"></div>
+          <button class="btn btn-w" style="width:100%;margin-top:.5rem" onclick="changerMdp()">Changer le mot de passe</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:1rem">Mon entreprise</div>
+        <div class="mrow"><div class="mlbl">Raison sociale</div><input type="text" id="ent-nom" value="${e.nom||''}"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="mrow"><div class="mlbl">SIRET</div><input type="text" id="ent-siret" value="${e.siret||''}"></div>
+          <div class="mrow"><div class="mlbl">SIREN</div><input type="text" id="ent-siren" value="${e.siren||''}"></div>
+        </div>
+        <div class="mrow"><div class="mlbl">N° TVA intracommunautaire</div><input type="text" id="ent-tva" value="${e.tva_intra||''}"></div>
+        <div class="mrow"><div class="mlbl">Adresse</div><input type="text" id="ent-adresse" value="${e.adresse||''}"></div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+          <div class="mrow"><div class="mlbl">Code postal</div><input type="text" id="ent-cp" value="${e.code_postal||''}"></div>
+          <div class="mrow"><div class="mlbl">Ville</div><input type="text" id="ent-ville" value="${e.ville||''}"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="mrow"><div class="mlbl">Téléphone</div><input type="text" id="ent-tel" value="${e.telephone||''}"></div>
+          <div class="mrow"><div class="mlbl">Email</div><input type="text" id="ent-email" value="${e.email||''}"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="mrow"><div class="mlbl">Forme juridique</div><input type="text" id="ent-forme" value="${e.forme_juridique||''}"></div>
+          <div class="mrow"><div class="mlbl">Capital (€)</div><input type="number" id="ent-capital" value="${e.capital||''}"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="mrow"><div class="mlbl">Convention collective</div><input type="text" id="ent-conv" value="${e.convention_collective||''}"></div>
+          <div class="mrow"><div class="mlbl">Code APE</div><input type="text" id="ent-ape" value="${e.code_ape||''}"></div>
+        </div>
+        <button class="btn btn-p" style="width:100%;margin-top:.75rem" onclick="sauverEntreprise()">Sauvegarder l'entreprise</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Exercices comptables</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${exList.map(a => `<button class="btn ${a==window._exercice?'btn-p':''}" onclick="changeExercice(${a})" style="min-width:100px">${a} ${a==window._exercice?'✓ Actif':''}</button>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--t2);margin-top:.75rem">L'exercice sélectionné détermine les données affichées dans le bilan, le résultat, les ratios et les déclarations.</div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--r)">
+      <div class="ct" style="margin-bottom:.5rem;color:var(--r)">Zone dangereuse</div>
+      <button class="btn btn-d" onclick="if(confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) logout()">Se déconnecter</button>
+    </div>`;
+};
+
+window.sauverProfil = async function() {
+  const prenom = document.getElementById('prof-prenom')?.value;
+  const nom = document.getElementById('prof-nom')?.value;
+  const email = document.getElementById('prof-email')?.value;
+  const data = await api.patch('/api/entreprise/profil', {prenom, nom, email});
+  if (data) showToast('Profil sauvegardé ✓', 'success');
+};
+
+window.changerMdp = async function() {
+  const ancien = document.getElementById('prof-old-pwd')?.value;
+  const nouveau = document.getElementById('prof-new-pwd')?.value;
+  if (!ancien || !nouveau) { showToast('Remplir les deux champs', 'error'); return; }
+  if (nouveau.length < 8) { showToast('8 caractères minimum', 'error'); return; }
+  const data = await api.post('/api/entreprise/profil/password', {ancien_mdp: ancien, nouveau_mdp: nouveau});
+  if (data) { showToast('Mot de passe changé ✓', 'success'); document.getElementById('prof-old-pwd').value=''; document.getElementById('prof-new-pwd').value=''; }
+};
+
+window.sauverEntreprise = async function() {
+  const fields = {
+    nom: document.getElementById('ent-nom')?.value,
+    siret: document.getElementById('ent-siret')?.value,
+    siren: document.getElementById('ent-siren')?.value,
+    tva_intra: document.getElementById('ent-tva')?.value,
+    adresse: document.getElementById('ent-adresse')?.value,
+    code_postal: document.getElementById('ent-cp')?.value,
+    ville: document.getElementById('ent-ville')?.value,
+    telephone: document.getElementById('ent-tel')?.value,
+    email: document.getElementById('ent-email')?.value,
+    forme_juridique: document.getElementById('ent-forme')?.value,
+    capital: parseFloat(document.getElementById('ent-capital')?.value) || null,
+    convention_collective: document.getElementById('ent-conv')?.value,
+    code_ape: document.getElementById('ent-ape')?.value,
+  };
+  const data = await api.patch('/api/entreprise', fields);
+  if (data) {
+    showToast('Entreprise sauvegardée ✓', 'success');
+    const sfEl = document.getElementById('sf-company');
+    if (sfEl) sfEl.textContent = fields.nom;
+  }
+};
+
+// ── Exercice global ──
+window._exercice = new Date().getFullYear();
+
+window.changeExercice = async function(annee) {
+  window._exercice = parseInt(annee);
+  const sel = document.getElementById('exercice-select');
+  if (sel) sel.value = annee;
+  showToast('Exercice ' + annee + ' sélectionné', 'success');
+  // Recharger la page active
+  const active = document.querySelector('.panel.active');
+  if (active) {
+    const id = active.id.replace('p-', '');
+    if (window._goLoaders && window._goLoaders[id]) window._goLoaders[id]();
+  }
+};
+
+// Charger les exercices disponibles au démarrage
+async function initExercices() {
+  const data = await api.get('/api/entreprise/exercices');
+  if (!data || !data.exercices) return;
+  const sel = document.getElementById('exercice-select');
+  if (!sel) return;
+  sel.innerHTML = data.exercices.map(a =>
+    `<option value="${a}" ${a == window._exercice ? 'selected' : ''}>Exercice ${a}</option>`
+  ).join('');
 }
+setTimeout(function(){ if(_token) initExercices(); }, 2000);
 
 </script>
 </body>
