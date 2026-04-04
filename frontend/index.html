@@ -387,7 +387,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- ENCAISSEMENTS / DECAISSEMENTS -->
 <div id="p-encaiss" class="panel">
 <div class="topbar"><div class="tb-l"><div class="pt">Encaissements / Decaissements</div></div>
-<div class="tb-r"><select class="sel" id="encaiss-mode" onchange="renderEncaiss()"><option value="m">Vue mensuelle</option><option value="w">Vue hebdomadaire</option></select><button class="btn btn-p">Export PDF</button></div></div>
+<div class="tb-r"><select class="sel" id="encaiss-mode" onchange="loadEncaissements()"><option value="m">Vue mensuelle</option><option value="w">Vue hebdomadaire</option></select><button class="btn btn-p" onclick="exportPage('encaiss')">Export PDF</button></div></div>
 <div class="content">
 <div class="mg mg4">
 <div class="mc"><div class="ml">Encaissements realises</div><div class="mv pos">27 600 &euro;</div></div>
@@ -2197,26 +2197,74 @@ async function convertirBC(id) {
 
 // ── Encaissements / Décaissements ──
 async function loadEncaissements() {
-  const data = await api.get('/api/tresorerie/solde');
-  if (!data) return;
-  const cards = document.querySelectorAll('#p-encaiss .mv');
-  if (cards[0]) cards[0].textContent = fmtEur(data.encaissements_mois);
-  if (cards[2]) cards[2].textContent = fmtEur(Math.abs(data.decaissements_mois));
+  const mode = (document.getElementById('encaiss-mode')||{}).value || 'm';
   const now = new Date();
-  const mvts = await api.get('/api/tresorerie/releves?annee='+now.getFullYear()+'&mois='+(now.getMonth()+1));
-  if (!mvts) return;
-  const encTbody = document.querySelector('#p-encaiss .g2 .card:first-child tbody');
-  const decTbody = document.querySelector('#p-encaiss .g2 .card:last-child tbody');
-  if (encTbody) {
-    encTbody.innerHTML = (mvts.mouvements||[]).filter(m=>m.montant>0).map(m =>
-      `<tr><td>${m.date_operation}</td><td>${m.categorie||''}</td><td class="mono">${m.libelle.substring(0,30)}</td><td class="tr pos">${fmtEur(m.montant)}</td><td><span class="tag tg">✓</span></td></tr>`
-    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun encaissement</td></tr>';
+  const solde = await api.get('/api/tresorerie/solde');
+
+  // Calculer les dates selon le mode
+  let annee = now.getFullYear(), mois = now.getMonth() + 1;
+  let label = '';
+  if (mode === 'w') {
+    // Vue hebdomadaire : 7 derniers jours depuis mouvements
+    label = 'Cette semaine';
+  } else {
+    label = now.toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
   }
-  if (decTbody) {
-    decTbody.innerHTML = (mvts.mouvements||[]).filter(m=>m.montant<0).map(m =>
-      `<tr><td>${m.date_operation}</td><td>${m.categorie||''}</td><td>${m.libelle.substring(0,30)}</td><td class="tr neg">${fmtEur(Math.abs(m.montant))}</td><td><span class="tag tg">✓</span></td></tr>`
-    ).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun décaissement</td></tr>';
+
+  const mvts = await api.get('/api/tresorerie/mouvements?annee=' + annee + (mode === 'm' ? '&mois=' + mois : ''));
+  const c = document.querySelector('#p-encaiss .content');
+  if (!c) return;
+
+  let allMvts = mvts || [];
+  if (mode === 'w') {
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+    allMvts = allMvts.filter(m => m.date_operation >= weekAgo);
   }
+
+  const enc = allMvts.filter(m => m.montant > 0);
+  const dec = allMvts.filter(m => m.montant < 0);
+  const totalEnc = enc.reduce((s, m) => s + m.montant, 0);
+  const totalDec = dec.reduce((s, m) => s + m.montant, 0);
+  const soldeActuel = solde ? solde.solde : 0;
+
+  const makeRow = (m, isEnc) => {
+    const cls = isEnc ? 'pos' : 'neg';
+    return `<tr><td>${m.date_operation}</td><td>${m.categorie || ''}</td><td>${m.libelle.substring(0, 35)}</td><td class="tr ${cls}">${fmtEur(isEnc ? m.montant : Math.abs(m.montant))}</td></tr>`;
+  };
+
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Encaissements</div><div class="mv pos">${fmtEur(totalEnc)}</div><div class="mt">${enc.length} opération(s)</div></div>
+      <div class="mc"><div class="ml">Décaissements</div><div class="mv neg">${fmtEur(Math.abs(totalDec))}</div><div class="mt">${dec.length} opération(s)</div></div>
+      <div class="mc"><div class="ml">Solde net période</div><div class="mv" style="color:${totalEnc+totalDec>=0?'var(--g)':'var(--r)'}">${fmtEur(totalEnc + totalDec)}</div></div>
+      <div class="mc"><div class="ml">Solde bancaire actuel</div><div class="mv" style="color:var(--b)">${fmtEur(soldeActuel)}</div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="ct" style="margin-bottom:.75rem">Encaissements — ${label}</div>
+        <table><thead><tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th class="tr">Montant</th></tr></thead>
+        <tbody>${enc.map(m => makeRow(m, true)).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun encaissement</td></tr>'}</tbody></table>
+        <div style="margin-top:.75rem;padding:.75rem;background:var(--s3);border-radius:var(--rad);display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t2)">Total encaissements</span><span style="font-weight:700;color:var(--g)">${fmtEur(totalEnc)}</span></div>
+      </div>
+      <div class="card"><div class="ct" style="margin-bottom:.75rem">Décaissements — ${label}</div>
+        <table><thead><tr><th>Date</th><th>Catégorie</th><th>Libellé</th><th class="tr">Montant</th></tr></thead>
+        <tbody>${dec.map(m => makeRow(m, false)).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun décaissement</td></tr>'}</tbody></table>
+        <div style="margin-top:.75rem;padding:.75rem;background:var(--s3);border-radius:var(--rad);display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t2)">Total décaissements</span><span style="font-weight:700;color:var(--r)">${fmtEur(Math.abs(totalDec))}</span></div>
+      </div>
+    </div>`;
+}
+
+// ── Export générique page ──
+function exportPage(id) {
+  const content = document.querySelector('#p-'+id+' .content');
+  if (!content) return;
+  const title = document.querySelector('#p-'+id+' .pt');
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+(title?title.textContent:'Export')+'</title><style>body{font-family:sans-serif;padding:2rem;color:#1E293B;font-size:13px}table{width:100%;border-collapse:collapse}th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #E2E8F0;font-size:12px}th{background:#F8FAFC;font-weight:700}.pos{color:#16A34A}.neg{color:#DC2626}h1{font-size:18px;margin-bottom:1rem}.footer{margin-top:2rem;font-size:10px;color:#94A3B8;text-align:center}@media print{body{padding:1rem}}</style></head><body>');
+  w.document.write('<h1>'+(title?title.textContent:'')+'</h1><div style="font-size:11px;color:#94A3B8;margin-bottom:1rem">Exporté le '+new Date().toLocaleDateString('fr-FR')+'</div>');
+  w.document.write(content.innerHTML);
+  w.document.write('<div class="footer">Bras Droit · Document confidentiel</div></body></html>');
+  w.document.close();
+  setTimeout(()=>w.print(), 300);
 }
 
 // ── Journal comptable ──
