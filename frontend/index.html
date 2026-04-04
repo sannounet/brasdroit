@@ -495,7 +495,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- JOURNAL -->
 <div id="p-journal" class="panel">
 <div class="topbar"><div class="tb-l"><div class="pt">Journal de saisie &mdash; Red Flags IA</div></div>
-<div class="tb-r"><span class="tag tr2">7 anomalies</span><button class="btn btn-p" style="margin-left:6px">+ Ecriture</button></div></div>
+<div class="tb-r"><span class="tag tr2">7 anomalies</span><button class="btn btn-p" style="margin-left:6px" onclick="ajouterEcriture()">+ Ecriture</button></div></div>
 <div class="content">
 <div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Moteur IA actif &mdash; verification PCG, doublons, TVA, equilibre en temps reel</div></div></div>
 <div class="g3" style="margin-bottom:.875rem">
@@ -549,7 +549,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PLAN DE COMPTES -->
 <div id="p-plan" class="panel">
-<div class="topbar"><div class="pt">Plan de comptes &mdash; PCG 2025</div><div class="tb-r"><button class="btn">+ Creer compte</button><button class="btn btn-p">Export FEC</button></div></div>
+<div class="topbar"><div class="pt">Plan de comptes &mdash; PCG 2026</div><div class="tb-r"><button class="btn" onclick="ajouterCompte()">+ Créer compte</button><button class="btn btn-p" onclick="exportPage('plan')">Export FEC</button></div></div>
 <div class="content">
 <div class="card">
 <table><thead><tr><th>Compte</th><th>Libelle</th><th>Classe</th><th class="tr">Debit</th><th class="tr">Credit</th><th>Actif</th></tr></thead>
@@ -2265,6 +2265,28 @@ function exportPage(id) {
   w.document.write('<div class="footer">Bras Droit · Document confidentiel</div></body></html>');
   w.document.close();
   setTimeout(()=>w.print(), 300);
+}
+
+// ── Ajouter écriture ──
+async function ajouterEcriture() {
+  const d = prompt('Date (AAAA-MM-JJ):') || '';
+  const debit = prompt('Compte débit (ex: 411000):') || '';
+  const credit = prompt('Compte crédit (ex: 706000):') || '';
+  const libelle = prompt('Libellé:') || '';
+  const montant = parseFloat(prompt('Montant:') || '0');
+  if (!d || !debit || !credit || !libelle || !montant) { showToast('Tous les champs sont requis','error'); return; }
+  const data = await api.post('/api/compta/ecritures?date_ecriture='+d+'&compte_debit='+debit+'&compte_credit='+credit+'&libelle='+encodeURIComponent(libelle)+'&montant='+montant);
+  if (data) { showToast('Écriture créée ✓','success'); loadJournal(); }
+}
+
+// ── Ajouter compte ──
+async function ajouterCompte() {
+  const numero = prompt('Numéro de compte (ex: 601000):') || '';
+  const libelle = prompt('Libellé:') || '';
+  const classe = parseInt(numero[0] || '0');
+  if (!numero || !libelle) { showToast('Numéro et libellé requis','error'); return; }
+  const data = await api.post('/api/compta/comptes?numero='+numero+'&libelle='+encodeURIComponent(libelle)+'&classe='+classe);
+  if (data) { showToast('Compte '+numero+' créé ✓','success'); loadPlanComptes(); }
 }
 
 // ── Journal comptable ──

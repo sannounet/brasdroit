@@ -38,6 +38,34 @@ def list_ecritures(
     return q.order_by(Ecriture.date_ecriture.desc()).all()
 
 
+@router.post("/ecritures")
+def create_ecriture(
+    date_ecriture: str = Query(...),
+    compte_debit: str = Query(...),
+    compte_credit: str = Query(...),
+    libelle: str = Query(...),
+    montant: float = Query(...),
+    numero_piece: Optional[str] = None,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Créer une nouvelle écriture comptable."""
+    e = Ecriture(
+        entreprise_id=current_user.entreprise_id,
+        date_ecriture=date_ecriture,
+        numero_piece=numero_piece,
+        compte_debit=compte_debit,
+        compte_credit=compte_credit,
+        libelle=libelle,
+        montant=montant,
+        created_by=current_user.id,
+    )
+    db.add(e)
+    db.commit()
+    db.refresh(e)
+    return e
+
+
 # ─── COMPTES COMPTABLES ───
 
 @router.get("/comptes")
@@ -49,6 +77,27 @@ def list_comptes(
     return db.query(CompteComptable).filter(
         CompteComptable.entreprise_id == current_user.entreprise_id
     ).order_by(CompteComptable.numero).all()
+
+
+@router.post("/comptes")
+def create_compte(
+    numero: str = Query(...),
+    libelle: str = Query(...),
+    classe: int = Query(...),
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Créer un nouveau compte comptable."""
+    c = CompteComptable(
+        entreprise_id=current_user.entreprise_id,
+        numero=numero,
+        libelle=libelle,
+        classe=classe,
+    )
+    db.add(c)
+    db.commit()
+    db.refresh(c)
+    return c
 
 
 # ─── BILAN ───
