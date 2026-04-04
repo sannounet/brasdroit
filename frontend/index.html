@@ -1408,6 +1408,8 @@ function go(id){
     var oc=n.getAttribute('onclick')||'';
     if(oc.indexOf("'"+id+"'")>-1) n.classList.add('active');
   });
+  // Charger les données dynamiques
+  if(typeof _goLoaders!=='undefined' && _goLoaders[id]) _goLoaders[id]();
 }
 
 // TABS
@@ -1936,41 +1938,36 @@ document.addEventListener('DOMContentLoaded', function() {
     loadDashboard();
   }
 
-  // Charger les données au changement de panel
-  const originalGo = window.go;
-  window.go = function(id) {
-    originalGo(id);
-    const loaders = {
-      'dashboard': loadDashboard,
-      'alertes': loadAlertes,
-      'factures': loadFactures,
-      'employes': loadEmployes,
-      'bdc': loadBonsCommande,
-      'encaiss': loadEncaissements,
-      'journal': loadJournal,
-      'lettrage': loadLettrage,
-      'plan': loadPlanComptes,
-      'recovery': loadRecouvrement,
-      'treso': loadTresorerie,
-      'releves': loadReleves,
-      'charges': loadChargesPatronales,
-      'bilan': loadBilan,
-      'resultat': loadResultat,
-      'ratios': loadRatios,
-      'decl-tva': loadTVA,
-      'decl-is': loadIS,
-      'decl-urssaf': loadURSSAF,
-      'dsn': loadDSN,
-      'ras': loadRAS,
-      'budget': loadBudget,
-      'journal-paie': loadJournalPaie,
-      'paie-params': loadPaieParams,
-      'judicial': loadJudiciaire,
-      'liasse': loadLiasse,
-      'ecarts': loadEcarts,
-      'optim': loadOptimisation,
-    };
-    if (loaders[id]) loaders[id]();
+  // Enregistrer les loaders pour la navigation
+  window._goLoaders = {
+    'dashboard': loadDashboard,
+    'alertes': loadAlertes,
+    'factures': loadFactures,
+    'employes': loadEmployes,
+    'bdc': loadBonsCommande,
+    'encaiss': loadEncaissements,
+    'journal': loadJournal,
+    'lettrage': loadLettrage,
+    'plan': loadPlanComptes,
+    'recovery': loadRecouvrement,
+    'treso': loadTresorerie,
+    'releves': loadReleves,
+    'charges': loadChargesPatronales,
+    'bilan': loadBilan,
+    'resultat': loadResultat,
+    'ratios': loadRatios,
+    'decl-tva': loadTVA,
+    'decl-is': loadIS,
+    'decl-urssaf': loadURSSAF,
+    'dsn': loadDSN,
+    'ras': loadRAS,
+    'budget': loadBudget,
+    'journal-paie': loadJournalPaie,
+    'paie-params': loadPaieParams,
+    'judicial': loadJudiciaire,
+    'liasse': loadLiasse,
+    'ecarts': loadEcarts,
+    'optim': loadOptimisation,
   };
 });
 
