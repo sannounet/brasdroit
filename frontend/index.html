@@ -1965,6 +1965,10 @@ document.addEventListener('DOMContentLoaded', function() {
       'budget': loadBudget,
       'journal-paie': loadJournalPaie,
       'paie-params': loadPaieParams,
+      'judicial': loadJudiciaire,
+      'liasse': loadLiasse,
+      'ecarts': loadEcarts,
+      'optim': loadOptimisation,
     };
     if (loaders[id]) loaders[id]();
   };
@@ -2367,6 +2371,106 @@ async function loadJournalPaie() {
     <div class="mc"><div class="ml">Coût total employeur</div><div class="mv">${fmtEur(tB+tCP)}</div></div></div>
     <div class="card"><div class="ct" style="margin-bottom:.75rem">Journal — ${mois}/${annee}</div>
     <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Cotis. sal.</th><th class="tr">Cotis. pat.</th><th class="tr">Net payé</th></tr></thead><tbody>${rows}${bulletins.length?`<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(tB)}</td><td class="tr neg">${fmtEur(tCS)}</td><td class="tr neg">${fmtEur(tCP)}</td><td class="tr pos">${fmtEur(tN)}</td></tr>`:''}</tbody></table></div>`;
+}
+
+// ── Judiciaire ──
+async function loadJudiciaire() {
+  const data = await api.get('/api/facturation/judiciaire');
+  const c = document.querySelector('#p-judicial .content');
+  if (!c||!data) return;
+  const dossiers = data.dossiers||[];
+  const dossiersHtml = dossiers.map(d => {
+    const relances = (d.relances||[]).map(r =>
+      `<div class="tli"><div class="tld done"></div><div class="tlc"><div class="tll">${r.type_relance} — ${r.objet||''}</div><div class="tls">${r.date_envoi||''} ${r.mail_lu?'· Lu':'· Non lu'}</div></div></div>`
+    ).join('');
+    return `<div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+        <div><div style="font-size:14px;font-weight:700">${d.client_nom||'Client'} — ${d.numero}</div>
+        <div style="font-size:12px;color:var(--rt);margin-top:2px">${fmtEur(d.montant_ttc)} · J+${d.jours_retard||0}</div></div>
+        <span class="tag tp">Phase judiciaire</span></div>
+      <div class="g2"><div><div class="tl">${relances||'<div style="color:var(--t3)">Aucune relance</div>'}</div></div>
+      <div><div style="background:var(--s3);border-radius:var(--rad2);padding:.875rem;font-size:12.5px">
+        <div class="stat"><span class="sl">Créance principale</span><span class="sv">${fmtEur(d.montant_ttc)}</span></div>
+        <div class="stat"><span class="sl">Intérêts de retard</span><span class="sv">${fmtEur(d.interets||0)}</span></div>
+        <div class="stat"><span class="sl" style="font-weight:600">Total réclamable</span><span class="sv neg">${fmtEur((d.montant_ttc||0)+(d.interets||0))}</span></div>
+      </div></div></div></div>`;
+  }).join('');
+  c.innerHTML = dossiers.length ? `
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Dossiers actifs</div><div class="mv" style="color:var(--r)">${data.nb_dossiers||dossiers.length}</div></div>
+      <div class="mc"><div class="ml">Créances totales</div><div class="mv neg">${fmtEur(data.total_principal||0)}</div></div>
+      <div class="mc"><div class="ml">Intérêts cumulés</div><div class="mv neg">${fmtEur(data.total_interets||0)}</div></div>
+    </div>${dossiersHtml}`
+    : '<div class="card" style="text-align:center;padding:2rem"><div style="font-size:28px;margin-bottom:8px">✓</div><div style="font-size:14px;font-weight:600;color:var(--g)">Aucun dossier judiciaire en cours</div></div>';
+}
+
+// ── Liasse fiscale ──
+async function loadLiasse() {
+  const annee = new Date().getFullYear()-1;
+  const data = await api.get('/api/compta/liasse?annee='+annee);
+  const c = document.querySelector('#p-liasse .content');
+  if (!c||!data) return;
+  const makeRows = (obj) => Object.entries(obj||{}).map(([code,item]) =>
+    `<div class="lf"><span class="mono" style="color:var(--t2)">${code}</span><span>${item.libelle||''}</span><input class="li auto" value="${fmtEur(item.montant||0)}" readonly><span style="font-size:11px;color:var(--t2)">Auto</span></div>`
+  ).join('');
+  c.innerHTML = `
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">Liasse auto-remplie depuis la comptabilité — Exercice ${annee}</div></div></div>
+    <div class="g2">
+      <div class="card"><div class="ct" style="margin-bottom:.75rem">2050 — Actif</div>${makeRows(data.actif_2050||data['2050']||{})}</div>
+      <div class="card"><div class="ct" style="margin-bottom:.75rem">2051 — Passif</div>${makeRows(data.passif_2051||data['2051']||{})}</div>
+    </div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">2052 — Compte de résultat</div>${makeRows(data.resultat_2052||data['2052']||{})}</div>`;
+}
+
+// ── Écarts ──
+async function loadEcarts() {
+  const annee = new Date().getFullYear();
+  const data = await api.get('/api/compta/ecarts?annee='+annee);
+  const c = document.querySelector('#p-ecarts .content');
+  if (!c||!data) return;
+  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const items = data.mois||[];
+  const rows = items.map(m => {
+    const flag = m.alerte ? 'background:var(--rb)' : '';
+    return `<tr style="${flag}"><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
+      <td class="tr pos">${fmtEur(m.reel_revenus||0)}</td><td class="tr pos">${fmtEur(m.budget_revenus||0)}</td>
+      <td class="tr ${(m.ecart_revenus_pct||0)>=0?'pos':'neg'}">${(m.ecart_revenus_pct||0).toFixed(0)}%</td>
+      <td class="tr neg">${fmtEur(Math.abs(m.reel_depenses||0))}</td><td class="tr neg">${fmtEur(Math.abs(m.budget_depenses||0))}</td>
+      <td class="tr ${(m.ecart_depenses_pct||0)<=0?'pos':'neg'}">${(m.ecart_depenses_pct||0).toFixed(0)}%</td>
+      ${m.alerte?'<td><span class="tag tr2">⚠</span></td>':'<td><span class="tag tg">OK</span></td>'}</tr>`;
+  }).join('') || '<tr><td colspan="8" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  c.innerHTML = `
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Écarts budget vs réel — ${annee}</div>
+    <table><thead><tr><th>Mois</th><th class="tr">CA réel</th><th class="tr">CA budget</th><th class="tr">Écart</th><th class="tr">Dép. réel</th><th class="tr">Dép. budget</th><th class="tr">Écart</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ── Optimisation IA ──
+async function loadOptimisation() {
+  const data = await api.get('/api/compta/optimisation');
+  const c = document.querySelector('#p-optim .content');
+  if (!c||!data) return;
+  const suggestions = data.suggestions||data||[];
+  const html = suggestions.map(s => {
+    const cls = s.priorite==='haute'?'fd':s.priorite==='moyenne'?'fw':'fi';
+    const icon = s.priorite==='haute'?'🔴':s.priorite==='moyenne'?'🟡':'🟢';
+    return `<div class="${cls}" style="margin-bottom:8px"><div class="fic">${icon}</div><div class="fb">
+      <div class="ftt">${s.titre||''}</div>
+      <div class="fdesc">${s.description||''} ${s.impact_euros?'· Impact: '+fmtEur(s.impact_euros):''}</div>
+      ${s.action?`<div class="fa"><button class="btn btn-sm btn-s">${s.action}</button></div>`:''}</div></div>`;
+  }).join('');
+  c.innerHTML = suggestions.length ? `
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">${suggestions.length} suggestions d'optimisation identifiées par l'IA</div></div></div>
+    ${html}` : '<div class="card" style="text-align:center;padding:2rem"><div style="font-size:14px;color:var(--g)">✓ Aucune optimisation suggérée — tout est optimal</div></div>';
+}
+
+// ── Paie params ── (enrichi)
+async function loadPaieParams() {
+  const data = await api.get('/api/entreprise');
+  if (!data) return;
+  const nom = document.getElementById('pp-nom');
+  const siret = document.getElementById('pp-siret');
+  if (nom) nom.value = data.nom || '';
+  if (siret) siret.value = data.siret || '';
 }
 
 </script>

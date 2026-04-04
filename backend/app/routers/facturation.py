@@ -208,6 +208,68 @@ def envoyer_relance(
     return {"relance": mail, "nb_relances_total": f.nb_relances}
 
 
+# ─── JUDICIAIRE ───
+
+@router.get("/judiciaire")
+def dossiers_judiciaires(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Liste des factures en phase judiciaire avec relances et interets."""
+    from sqlalchemy.orm import joinedload
+
+    factures = db.query(Facture).options(joinedload(Facture.relances)).filter(
+        Facture.entreprise_id == current_user.entreprise_id,
+        (Facture.statut == StatutFacture.judiciaire) | (Facture.phase_judiciaire == True),
+    ).order_by(Facture.id.desc()).all()
+
+    today = date.today()
+    result = []
+    total_principal = 0
+    total_interets = 0
+
+    for f in factures:
+        client = db.query(Client).filter(Client.id == f.client_id).first()
+        jours_retard = (today - f.date_echeance).days if f.date_echeance and f.date_echeance < today else 0
+        montant = float(f.montant_ttc or 0)
+        interets = round(montant * 0.02, 2)
+        total_principal += montant
+        total_interets += interets
+
+        relances_list = [
+            {
+                "id": r.id,
+                "type_relance": r.type_relance,
+                "date_envoi": str(r.date_envoi) if r.date_envoi else None,
+                "objet": r.objet,
+                "corps": r.corps,
+                "mail_lu": r.mail_lu,
+            }
+            for r in f.relances
+        ]
+
+        result.append({
+            "facture_id": f.id,
+            "numero": f.numero,
+            "client": client.nom if client else "—",
+            "client_email": client.email if client else None,
+            "objet": f.objet,
+            "date_facture": str(f.date_facture),
+            "date_echeance": str(f.date_echeance),
+            "montant_ttc": montant,
+            "jours_retard": jours_retard,
+            "nb_relances": f.nb_relances,
+            "interets": interets,
+            "total_du": round(montant + interets, 2),
+            "relances": relances_list,
+        })
+
+    return {
+        "dossiers": result,
+        "nb_dossiers": len(result),
+        "total_principal": round(total_principal, 2),
+        "total_interets": round(total_interets, 2),
+        "total_global": round(total_principal + total_interets, 2),
+    }
+
+
 @router.get("/dashboard-recouvrement")
 def dashboard_recouvrement(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Résumé des impayés avec calcul des jours de retard."""

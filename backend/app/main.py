@@ -11,7 +11,7 @@ from app.core.database import engine, Base
 from app.models import models  # noqa
 
 # Import des routers
-from app.routers import auth, facturation, paie, dashboard, comptabilite, tresorerie, declarations
+from app.routers import auth, facturation, paie, dashboard, comptabilite, tresorerie, declarations, entreprise
 
 # ── Création des tables PostgreSQL ──
 Base.metadata.create_all(bind=engine)
@@ -48,6 +48,7 @@ app.include_router(dashboard.router)
 app.include_router(comptabilite.router)
 app.include_router(tresorerie.router)
 app.include_router(declarations.router)
+app.include_router(entreprise.router)
 
 
 # ── Routes de base ──
