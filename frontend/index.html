@@ -1677,54 +1677,143 @@ async function register(email, password, prenom, nom, entreprise_nom) {
 async function loadDashboard() {
   const sel = document.getElementById('dash-periode');
   const periode = sel ? sel.value : 'mois';
-  const periodeLabel = {mois:'Ce mois',semaine:'Cette semaine',trimestre:'Ce trimestre'}[periode]||'Ce mois';
+  const pLabel = {mois:'Ce mois',semaine:'Cette semaine',trimestre:'Ce trimestre'}[periode]||'Ce mois';
   const stats = await api.get('/api/dashboard/stats?periode='+periode);
   if (!stats) return;
+  const alertes = await api.get('/api/dashboard/alertes');
+  const budget = await api.get('/api/declarations/budget?annee='+new Date().getFullYear());
+  const optim = await api.get('/api/compta/optimisation');
   const c = document.querySelector('#p-dashboard .content');
   if (!c) return;
-  const score = stats.score_sante||0;
-  const scoreColor = score>=75?'var(--g)':score>=50?'var(--a)':'var(--r)';
+
+  const s = stats.score_sante||0;
+  const sCol = s>=75?'var(--g)':s>=50?'var(--a)':'var(--r)';
+  const sLbl = s>=75?'Bonne santé':s>=50?'Score moyen — points à corriger':'Attention requise';
+
+  // Graphique CA 6 derniers mois depuis budget
+  const budgetMois = (budget&&budget.mois||[]).slice(-6);
+  const maxCA = Math.max(...budgetMois.map(m=>m.ca||m.revenus||0),1);
+  const barChart = budgetMois.map((m,i) => {
+    const ca = m.ca||m.revenus||0;
+    const h = Math.round((ca/maxCA)*90);
+    const mNom = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][m.mois]||'';
+    const isLast = i===budgetMois.length-1;
+    return `<div class="bc"><div class="bs" style="height:${h}%;background:${isLast?'var(--b)':'#BFDBFE'}"></div><div class="bl">${mNom}</div></div>`;
+  }).join('');
+  const barValues = budgetMois.map((m,i) => {
+    const ca = m.ca||m.revenus||0;
+    const isLast = i===budgetMois.length-1;
+    return `<span${isLast?' style="color:var(--b);font-weight:700"':''}>${ca>=1000?Math.round(ca/1000)+'k':ca}</span>`;
+  }).join('');
+
+  // Répartition charges depuis budget
+  const totalDep = budgetMois.reduce((s,m)=>s+(m.depenses||m.charges||0),0);
+  const masseSal = totalDep * 0.40, chSoc = totalDep * 0.25, fourni = totalDep * 0.22, frais = totalDep * 0.13;
+
+  // Alertes prochaines échéances
+  const prochaines = (alertes&&alertes.alertes||[]).slice(0,4).map(a => {
+    const cls = a.severite==='urgent'?'dl-urg':'dl-soon';
+    const col = a.severite==='urgent'?'var(--rt)':'var(--at)';
+    const jLabel = a.titre.match(/J[+-]\d+/)?.[0]||'';
+    return `<div class="dli ${cls}"><div class="dld" style="color:${col}">${jLabel}</div><div style="flex:1"><div class="dli-n">${a.titre}</div><div class="dli-s">${a.montant?fmtEur(a.montant):''} ${a.echeance?'· '+a.echeance:''}</div></div></div>`;
+  }).join('');
+
+  // Suggestions IA
+  const suggestions = (optim&&optim.suggestions||[]).slice(0,3).map(s => {
+    const cls = s.priorite==='haute'?'fd':s.priorite==='moyenne'?'fw':'fs';
+    const icon = s.priorite==='haute'?'⚠':s.priorite==='moyenne'?'💡':'✓';
+    return `<div class="${cls}" style="margin-bottom:7px"><div class="fic">${icon}</div><div class="fb"><div class="ftt">${s.titre||''}</div><div class="fdesc">${s.impact_euros?'Impact: '+fmtEur(s.impact_euros):s.description||''}</div></div></div>`;
+  }).join('')||'<div class="fs"><div class="fic">✓</div><div class="fb"><div class="ftt">Aucune action requise</div></div></div>';
+
   c.innerHTML = `
-    ${stats.nb_alertes_urgentes>0?`<div class="fd"><div class="fic">⚠</div><div class="fb"><div class="ftt">${stats.nb_alertes_urgentes} alertes urgentes — action requise</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button></div></div></div>`:''}
+    ${stats.nb_alertes_urgentes>0?`<div class="fd"><div class="fic">⚠</div><div class="fb"><div class="ftt">${stats.nb_alertes_urgentes} alertes urgentes — action requise aujourd'hui</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button><button class="btn btn-sm" onclick="go('decl-tva')">Préparer TVA</button></div></div></div>`:''}
     <div class="mg mg4">
-      <div class="mc"><div class="ml">CA ${periodeLabel.toLowerCase()}</div><div class="mv" style="color:var(--b)">${fmtEur(stats.ca_mois)}</div><div class="mbar"><div class="mbf" style="width:${Math.min(stats.ca_mois/1000,100)}%;background:var(--b)"></div></div></div>
-      <div class="mc"><div class="ml">Trésorerie banque</div><div class="mv" style="color:var(--g)">${fmtEur(stats.tresorerie)}</div><div class="mt neu">Temps réel</div></div>
-      <div class="mc"><div class="ml">Impayés en cours</div><div class="mv" style="color:var(--r)">${fmtEur(stats.impayes)}</div><div class="mt down">${stats.nb_factures_en_retard} dossier(s)</div></div>
-      <div class="mc"><div class="ml">Obligations</div><div class="mv" style="color:var(--a)">${fmtEur(stats.obligations_mois)}</div><div class="mt">Déclarations à payer</div></div>
+      <div class="mc"><div class="ml">CA ${pLabel.toLowerCase()}</div><div class="mv" style="color:var(--b)">${fmtEur(stats.ca_mois)}</div><div class="mbar"><div class="mbf" style="width:${Math.min(Math.round(stats.ca_mois/500),100)}%;background:var(--b)"></div></div></div>
+      <div class="mc"><div class="ml">Trésorerie banque</div><div class="mv" style="color:var(--g)">${fmtEur(stats.tresorerie)}</div><div class="mt neu">Temps réel</div><div class="mbar"><div class="mbf" style="width:${Math.min(Math.round(stats.tresorerie/500),100)}%;background:var(--g)"></div></div></div>
+      <div class="mc"><div class="ml">Impayés en cours</div><div class="mv" style="color:var(--r)">${fmtEur(stats.impayes)}</div><div class="mt down">${stats.nb_factures_en_retard} dossier(s) actif(s)</div><div class="mbar"><div class="mbf" style="width:${Math.min(Math.round(stats.impayes/500),100)}%;background:var(--r)"></div></div></div>
+      <div class="mc"><div class="ml">À payer ${pLabel.toLowerCase()}</div><div class="mv" style="color:var(--a)">${fmtEur(stats.obligations_mois)}</div><div class="mt down">TVA + URSSAF + IS</div><div class="mbar"><div class="mbf" style="width:${Math.min(Math.round(stats.obligations_mois/500),100)}%;background:var(--a)"></div></div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="ch"><div class="ct">CA mensuel 6 mois</div><span class="ai">✦ IA</span></div>
+        <div class="barchart">${barChart}</div>
+        <div style="display:flex;justify-content:space-around;font-size:10.5px;color:var(--t3);margin-top:2px">${barValues}</div>
+      </div>
+      <div class="card"><div class="ch"><div class="ct">Répartition charges</div></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:.25rem">
+          <div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Masse salariale</span><span style="font-weight:600">40% · ${fmtEur(masseSal)}</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:40%;height:100%;background:var(--b);border-radius:4px"></div></div></div>
+          <div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Charges sociales</span><span style="font-weight:600">25% · ${fmtEur(chSoc)}</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:25%;height:100%;background:var(--a);border-radius:4px"></div></div></div>
+          <div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Fournisseurs</span><span style="font-weight:600">22% · ${fmtEur(fourni)}</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:22%;height:100%;background:var(--p);border-radius:4px"></div></div></div>
+          <div class="prog-item"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span style="color:var(--t2)">Frais généraux</span><span style="font-weight:600">13% · ${fmtEur(frais)}</span></div><div style="height:7px;background:var(--s4);border-radius:4px;overflow:hidden"><div style="width:13%;height:100%;background:var(--g);border-radius:4px"></div></div></div>
+        </div>
+      </div>
     </div>
     <div class="g3">
-      <div class="card" style="text-align:center;padding:1.25rem"><div class="ct" style="margin-bottom:.5rem">Score santé financière</div>
-        <div style="font-size:42px;font-weight:800;color:${scoreColor}">${score}<span style="font-size:20px;color:var(--t3)">/100</span></div>
-        <div style="font-size:11.5px;color:var(--t2);margin-top:4px">${score>=75?'Bonne santé ✓':score>=50?'Score moyen — points à corriger':'Attention requise'}</div>
-      </div>
-      <div class="card"><div class="ct" style="margin-bottom:.6rem">Résumé période</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Période</span><span style="font-weight:600">${periodeLabel} (depuis ${stats.debut})</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Factures en retard</span><span style="font-weight:600;color:${stats.nb_factures_en_retard>0?'var(--r)':'var(--g)'}">${stats.nb_factures_en_retard}</span></div>
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Alertes urgentes</span><span style="font-weight:600;color:${stats.nb_alertes_urgentes>0?'var(--r)':'var(--g)'}">${stats.nb_alertes_urgentes}</span></div>
+      <div class="card"><div class="ct" style="margin-bottom:.6rem">Score santé financière</div>
+        <div style="text-align:center;padding:.5rem 0"><div style="font-size:42px;font-weight:800;color:${sCol}">${s}<span style="font-size:20px;color:var(--t3)">/100</span></div><div style="font-size:11.5px;color:var(--t2);margin-top:4px">${sLbl}</div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-top:.5rem">
+          <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Trésorerie</span><span style="color:${stats.tresorerie>20000?'var(--g)':'var(--r)'};font-weight:600">${stats.tresorerie>20000?'OK':'Bas'}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Impayés</span><span style="color:${stats.impayes==0?'var(--g)':'var(--r)'};font-weight:600">${stats.impayes==0?'Aucun':stats.nb_factures_en_retard+' en retard'}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--t2)">Obligations</span><span style="color:${stats.nb_alertes_urgentes==0?'var(--g)':'var(--a)'};font-weight:600">${stats.nb_alertes_urgentes} urgente(s)</span></div>
         </div>
       </div>
-      <div class="card"><div class="ct" style="margin-bottom:.6rem">Actions rapides</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn" style="width:100%" onclick="go('factures')">Factures →</button>
-          <button class="btn" style="width:100%" onclick="go('treso')">Trésorerie →</button>
-          <button class="btn" style="width:100%" onclick="go('alertes')">Alertes →</button>
-        </div>
+      <div class="card"><div class="ct" style="margin-bottom:.6rem">Prochaines échéances</div>
+        ${prochaines||'<div style="color:var(--t3);font-size:12px;text-align:center;padding:1rem">Aucune échéance proche</div>'}
+        <button class="btn" style="width:100%;margin-top:.5rem" onclick="go('alertes')">Toutes les échéances →</button>
       </div>
+      <div class="card"><div class="ct" style="margin-bottom:.6rem">Suggestions IA</div>${suggestions}</div>
     </div>`;
+  // Store stats for export
+  window._dashStats = stats;
 }
 
 function exportDashboard() {
-  const content = document.querySelector('#p-dashboard .content');
-  if (!content) return;
-  const w = window.open('','','width=800,height=600');
-  w.document.write('<html><head><title>Bras Droit — Export Dashboard</title><style>body{font-family:sans-serif;padding:2rem}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left}</style></head><body>');
-  w.document.write('<h1>Bras Droit — Tableau de bord</h1>');
-  w.document.write('<p>Exporté le '+new Date().toLocaleDateString('fr-FR')+'</p>');
-  w.document.write(content.innerHTML);
-  w.document.write('</body></html>');
-  w.document.close();
-  w.print();
+  const s = window._dashStats;
+  if (!s) { showToast('Chargez d\'abord le dashboard','error'); return; }
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
+  const pLabel = {mois:'Ce mois',semaine:'Cette semaine',trimestre:'Ce trimestre'}[s.periode]||'Ce mois';
+  const report = `
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bras Droit — Rapport ${dateStr}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:3rem;color:#1E293B;font-size:14px;line-height:1.6}
+  h1{font-size:24px;margin-bottom:4px} h2{font-size:16px;color:#475569;margin:2rem 0 .75rem;border-bottom:2px solid #E2E8F0;padding-bottom:6px}
+  .meta{font-size:12px;color:#94A3B8;margin-bottom:2rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+  .kpi{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:1.25rem}
+  .kpi-label{font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+  .kpi-value{font-size:28px;font-weight:800}
+  .blue{color:#2563EB} .green{color:#16A34A} .red{color:#DC2626} .orange{color:#D97706}
+  table{width:100%;border-collapse:collapse;margin-top:.5rem} th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #E2E8F0;font-size:13px}
+  th{background:#F8FAFC;font-weight:700;font-size:11px;text-transform:uppercase;color:#475569}
+  .r{text-align:right} .footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #E2E8F0;font-size:11px;color:#94A3B8;text-align:center}
+  @media print{body{padding:1.5rem}}
+</style></head><body>
+<h1>Bras Droit — Rapport de gestion</h1>
+<div class="meta">${dateStr} · Période : ${pLabel} (depuis ${s.debut}) · Score santé : ${s.score_sante}/100</div>
+
+<h2>Indicateurs clés</h2>
+<div class="grid">
+  <div class="kpi"><div class="kpi-label">Chiffre d'affaires (${pLabel.toLowerCase()})</div><div class="kpi-value blue">${fmtEur(s.ca_mois)}</div></div>
+  <div class="kpi"><div class="kpi-label">Trésorerie bancaire</div><div class="kpi-value green">${fmtEur(s.tresorerie)}</div></div>
+  <div class="kpi"><div class="kpi-label">Impayés en cours</div><div class="kpi-value red">${fmtEur(s.impayes)}</div><div style="font-size:12px;color:#94A3B8;margin-top:2px">${s.nb_factures_en_retard} facture(s) en retard</div></div>
+  <div class="kpi"><div class="kpi-label">Obligations à payer</div><div class="kpi-value orange">${fmtEur(s.obligations_mois)}</div><div style="font-size:12px;color:#94A3B8;margin-top:2px">${s.nb_alertes_urgentes} alerte(s) urgente(s)</div></div>
+</div>
+
+<h2>Synthèse</h2>
+<table>
+  <tr><td>Score de santé financière</td><td class="r" style="font-weight:700">${s.score_sante}/100</td></tr>
+  <tr><td>Factures en retard</td><td class="r">${s.nb_factures_en_retard}</td></tr>
+  <tr><td>Alertes urgentes</td><td class="r">${s.nb_alertes_urgentes}</td></tr>
+  <tr><td>Période analysée</td><td class="r">Depuis le ${s.debut}</td></tr>
+</table>
+
+<div class="footer">Rapport généré automatiquement par Bras Droit · ${dateStr} · Confidentiel</div>
+</body></html>`;
+  const blob = new Blob([report], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank','width=900,height=700');
+  setTimeout(()=>{w.print();},500);
 }
 
 async function loadAlertes() {
