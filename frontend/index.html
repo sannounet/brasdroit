@@ -892,13 +892,10 @@ input[type=number]{-moz-appearance:textfield}
 <div style="margin-left:auto"><div class="ml">Echeance</div><div style="font-size:14px;font-weight:700;color:var(--rt)">05/04/2026</div></div>
 </div>
 </div>
-<div class="card"><div class="ct" style="margin-bottom:.75rem">Historique declarations TVA 2026</div>
-<table><thead><tr><th>Mois</th><th class="tr">Collectee</th><th class="tr">Deductible</th><th class="tr">Net paye</th><th>Statut</th></tr></thead>
-<tbody>
-<tr><td>Janvier</td><td class="tr">6 240&euro;</td><td class="tr">1 420&euro;</td><td class="tr neg">4 820&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
-<tr><td>Fevrier</td><td class="tr">7 120&euro;</td><td class="tr">1 580&euro;</td><td class="tr neg">5 540&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
-<tr><td>Mars</td><td class="tr">8 400&euro;</td><td class="tr">1 720&euro;</td><td class="tr neg">6 680&euro;</td><td><span class="tag tg">&#10003; Deposee</span></td></tr>
-<tr style="background:var(--rb)"><td>Avril</td><td class="tr">9 720&euro;</td><td class="tr">1 840&euro;</td><td class="tr neg">7 880&euro;</td><td><span class="tag tr2">&#9888; A deposer J-2</span></td></tr>
+<div class="card"><div class="ct" style="margin-bottom:.75rem">Historique declarations TVA</div>
+<table><thead><tr><th>Mois</th><th class="tr">Collectee</th><th class="tr">Deductible</th><th class="tr">Net</th><th>Statut</th></tr></thead>
+<tbody id="tva-tbody">
+<tr><td colspan="5" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table></div>
 </div>
 </div>
@@ -936,18 +933,9 @@ input[type=number]{-moz-appearance:textfield}
 <div class="topbar"><div class="pt">URSSAF &mdash; Cotisations et DSN</div><div class="tb-r"><button class="btn btn-p">Telетransmettre</button></div></div>
 <div class="content">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Bordereau cotisations &mdash; Avril 2026</div>
-<table><thead><tr><th>Organisme / Nature</th><th>Taux</th><th class="tr">Sophie B.</th><th class="tr">Mohamed K.</th><th class="tr">Lea A.</th><th class="tr">Thomas D.</th><th class="tr">Total</th></tr></thead>
-<tbody>
-<tr class="sr"><td colspan="7">Part salariale</td></tr>
-<tr><td>Maladie salariale</td><td>0.40%</td><td class="tr">15</td><td class="tr">12</td><td class="tr">9</td><td class="tr">14</td><td class="tr neg">50</td></tr>
-<tr><td>Retraite CNAV sal.</td><td>6.90%</td><td class="tr">262</td><td class="tr">200</td><td class="tr">152</td><td class="tr">242</td><td class="tr neg">856</td></tr>
-<tr><td>CSG deductible</td><td>6.80%</td><td class="tr">254</td><td class="tr">194</td><td class="tr">147</td><td class="tr">234</td><td class="tr neg">829</td></tr>
-<tr class="sr"><td colspan="7">Part patronale</td></tr>
-<tr><td>Maladie patronale</td><td>13%</td><td class="tr">494</td><td class="tr">377</td><td class="tr">286</td><td class="tr">455</td><td class="tr neg">1 612</td></tr>
-<tr><td>CNAV patronale</td><td>8.55%</td><td class="tr">325</td><td class="tr">248</td><td class="tr">188</td><td class="tr">299</td><td class="tr neg">1 060</td></tr>
-<tr><td>Chomage patronal</td><td>4.05%</td><td class="tr">154</td><td class="tr">117</td><td class="tr">89</td><td class="tr">142</td><td class="tr neg">502</td></tr>
-<tr><td>Agirc-Arrco pat.</td><td>4.72%</td><td class="tr">179</td><td class="tr">137</td><td class="tr">104</td><td class="tr">165</td><td class="tr neg">585</td></tr>
-<tr class="subr"><td colspan="2">TOTAL COTISATIONS</td><td class="tr neg">1 683</td><td class="tr neg">1 285</td><td class="tr neg">975</td><td class="tr neg">1 551</td><td class="tr neg" style="font-size:14px">6 780&euro;</td></tr>
+<table><thead><tr><th>Mois</th><th class="tr">Cotis. salariales</th><th class="tr">Cotis. patronales</th><th class="tr">Total</th></tr></thead>
+<tbody id="urssaf-tbody">
+<tr><td colspan="4" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table>
 <div style="margin-top:.75rem;padding:.75rem;background:var(--rb);border-radius:var(--rad);display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;font-weight:600;color:var(--rt)">Echeance paiement: 30/04/2026 &middot; Prelevement BNP</span><span class="tag tr2">6 780&euro;</span></div>
 </div>
@@ -1081,23 +1069,19 @@ input[type=number]{-moz-appearance:textfield}
 <div class="content">
 <div style="background:linear-gradient(135deg,#1E293B,#334155);border-radius:var(--rad2);padding:1.25rem;margin-bottom:1rem;color:#fff">
 <div style="font-size:11px;opacity:.6;margin-bottom:4px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Solde bancaire actuel &mdash; BNP Paribas</div>
-<div style="font-size:36px;font-weight:800;margin-bottom:4px">42 300,00 &euro;</div>
+<div style="font-size:36px;font-weight:800;margin-bottom:4px" id="treso-solde">42 300,00 &euro;</div>
 <div style="font-size:12px;opacity:.6">Derniere sync: 03/04/2026 a 14h32 &middot; <span style="color:#4ADE80">&#9679; Connecte</span></div>
 <div style="display:flex;gap:2rem;margin-top:.875rem">
-<div><div style="font-size:10.5px;opacity:.5">Entrees ce mois</div><div style="font-size:16px;font-weight:700;color:#4ADE80">+27 600&euro;</div></div>
-<div><div style="font-size:10.5px;opacity:.5">Sorties ce mois</div><div style="font-size:16px;font-weight:700;color:#F87171">-3 990&euro;</div></div>
+<div><div style="font-size:10.5px;opacity:.5">Entrees ce mois</div><div style="font-size:16px;font-weight:700;color:#4ADE80" id="treso-entrees">+27 600&euro;</div></div>
+<div><div style="font-size:10.5px;opacity:.5">Sorties ce mois</div><div style="font-size:16px;font-weight:700;color:#F87171" id="treso-sorties">-3 990&euro;</div></div>
 <div><div style="font-size:10.5px;opacity:.5">Solde projete fin mois</div><div style="font-size:16px;font-weight:700;color:#FCD34D">52 253&euro;</div></div>
 </div>
 </div>
 <div class="fw"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">Pic de decaissement prevu le 05/04 (TVA 7 880&euro; + RAS 861&euro; + Legrand 2 450&euro;) = 11 191&euro;</div><div class="fdesc">Solde apres: 31 109&euro; &middot; Au-dessus du seuil minimum (25 000&euro;) mais surveiller</div></div></div>
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Derniers mouvements</div>
-<table><thead><tr><th>Date</th><th>Libelle</th><th>Categorie</th><th class="tr">Montant</th><th>Compte</th></tr></thead>
-<tbody>
-<tr><td>03/04</td><td>SFR BUSINESS</td><td><span class="tag tgy">Abonnement</span></td><td class="tr neg">-340&euro;</td><td class="mono">606xxx &#10003;</td></tr>
-<tr><td>01/04</td><td>VIR CLIENT 1</td><td><span class="tag tg">Encaissement</span></td><td class="tr pos">+9 600&euro;</td><td class="mono">411000 &#10003;</td></tr>
-<tr><td>31/03</td><td>PRLV URSSAF</td><td><span class="tag tw2">URSSAF</span></td><td class="tr neg">-3 240&euro;</td><td class="mono">431000 &#10003;</td></tr>
-<tr><td>28/03</td><td>VIR SALAIRES</td><td><span class="tag tb2">Salaires</span></td><td class="tr neg">-12 400&euro;</td><td class="mono">641100 &#10003;</td></tr>
-<tr style="background:var(--rb)"><td>26/03</td><td>VIR REF 2403261</td><td><span class="tag tr2">? Non identifie</span></td><td class="tr pos">+4 200&euro;</td><td class="mono">&mdash; &#9888;</td></tr>
+<table><thead><tr><th>Date</th><th>Libelle</th><th>Categorie</th><th class="tr">Montant</th><th>Lettré</th></tr></thead>
+<tbody id="treso-tbody">
+<tr><td colspan="5" style="text-align:center;color:var(--t3)">Chargement...</td></tr>
 </tbody></table>
 </div>
 </div>
@@ -2148,231 +2132,241 @@ async function loadChargesPatronales() {
 // ── Trésorerie ──
 async function loadTresorerie() {
   const data = await api.get('/api/tresorerie/solde');
-  if (!data) return;
-  const cards = document.querySelectorAll('#p-treso .mv');
-  if (cards[0]) cards[0].textContent = fmtEur(data.solde);
-  if (cards[1]) cards[1].textContent = fmtEur(data.encaissements_mois);
-  if (cards[2]) cards[2].textContent = fmtEur(Math.abs(data.decaissements_mois));
   const mvts = await api.get('/api/tresorerie/mouvements');
-  if (!mvts) return;
-  const tbody = document.querySelector('#p-treso table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = mvts.slice(0,20).map(m => {
-    const cls = m.montant >= 0 ? 'pos' : 'neg';
-    return `<tr><td>${m.date_operation}</td><td>${m.libelle}</td><td>${m.categorie||''}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${m.is_lettree?'<span class="tag tg">✓</span>':'<span class="tag tgy">—</span>'}</td></tr>`;
-  }).join('');
+  const c = document.querySelector('#p-treso .content');
+  if (!c) return;
+  const solde = data ? data.solde : 0;
+  const enc = data ? data.encaissements_mois : 0;
+  const dec = data ? data.decaissements_mois : 0;
+  const rows = (mvts||[]).slice(0,20).map(m => {
+    const cls = m.montant>=0?'pos':'neg';
+    return `<tr><td>${m.date_operation}</td><td>${m.libelle}</td><td><span class="tag tgy">${m.categorie||''}</span></td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${m.is_lettree?'<span class="tag tg">✓</span>':'—'}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun mouvement</td></tr>';
+  c.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1E293B,#334155);border-radius:var(--rad2);padding:1.25rem;margin-bottom:1rem;color:#fff">
+      <div style="font-size:11px;opacity:.6;margin-bottom:4px;font-weight:600;text-transform:uppercase">Solde bancaire actuel</div>
+      <div style="font-size:36px;font-weight:800;margin-bottom:4px">${fmtEur(solde)}</div>
+      <div style="display:flex;gap:2rem;margin-top:.875rem">
+        <div><div style="font-size:10.5px;opacity:.5">Entrées ce mois</div><div style="font-size:16px;font-weight:700;color:#4ADE80">+${fmtEur(enc)}</div></div>
+        <div><div style="font-size:10.5px;opacity:.5">Sorties ce mois</div><div style="font-size:16px;font-weight:700;color:#F87171">${fmtEur(dec)}</div></div>
+      </div>
+    </div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Derniers mouvements</div>
+      <table><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="tr">Montant</th><th>Lettré</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
 }
 
 // ── Relevés bancaires ──
 async function loadReleves() {
   const now = new Date();
   const data = await api.get('/api/tresorerie/releves?annee='+now.getFullYear()+'&mois='+(now.getMonth()+1));
-  if (!data) return;
-  const tbody = document.querySelector('#p-releves table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = (data.mouvements||[]).map(m => {
-    const cls = m.montant >= 0 ? 'pos' : 'neg';
+  const c = document.querySelector('#p-releves .content');
+  if (!c||!data) return;
+  const rows = (data.mouvements||[]).map(m => {
+    const cls = m.montant>=0?'pos':'neg';
     return `<tr><td>${m.date_operation}</td><td>${m.libelle}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td></tr>`;
-  }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucun mouvement ce mois</td></tr>';
+  }).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucun mouvement</td></tr>';
+  c.innerHTML = `<div class="card"><div class="ct" style="margin-bottom:.75rem">Relevé — ${now.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div>
+    <div style="display:flex;gap:1rem;margin-bottom:.75rem">
+      <div class="mc"><div class="ml">Solde ouverture</div><div class="mv">${fmtEur(data.solde_ouverture||0)}</div></div>
+      <div class="mc"><div class="ml">Solde clôture</div><div class="mv">${fmtEur(data.solde_cloture||0)}</div></div>
+    </div>
+    <table><thead><tr><th>Date</th><th>Libellé</th><th class="tr">Montant</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
-
-// loadCharges moved to loadChargesPatronales above
 
 // ── Bilan ──
 async function loadBilan() {
-  const annee = new Date().getFullYear() - 1;
+  const annee = new Date().getFullYear()-1;
   const data = await api.get('/api/compta/bilan?annee='+annee);
-  if (!data) return;
+  const c = document.querySelector('#p-bilan .content');
+  if (!c||!data) return;
   const classLabels = {1:'Capitaux',2:'Immobilisations',3:'Stocks',4:'Tiers',5:'Trésorerie'};
-  const actifTbody = document.querySelector('#p-bilan .g2 .card:first-child tbody');
-  const passifTbody = document.querySelector('#p-bilan .g2 .card:last-child tbody');
-  const toArray = (obj) => Object.entries(obj||{}).map(([k,v]) => ({classe:k, libelle:classLabels[k]||'Classe '+k, montant:v}));
-  if (actifTbody) {
-    const items = toArray(data.actif);
-    actifTbody.innerHTML = items.map(a =>
-      `<tr><td>Classe ${a.classe}</td><td>${a.libelle}</td><td class="tr pos">${fmtEur(a.montant)}</td></tr>`
-    ).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucune donnée</td></tr>';
-    actifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL ACTIF</td><td class="tr">${fmtEur(data.total_actif)}</td></tr>`;
-  }
-  if (passifTbody) {
-    const items = toArray(data.passif);
-    passifTbody.innerHTML = items.map(p =>
-      `<tr><td>Classe ${p.classe}</td><td>${p.libelle}</td><td class="tr neg">${fmtEur(p.montant)}</td></tr>`
-    ).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucune donnée</td></tr>';
-    passifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL PASSIF</td><td class="tr">${fmtEur(data.total_passif)}</td></tr>`;
-  }
+  const makeRows = (obj, cls) => Object.entries(obj||{}).map(([k,v]) =>
+    `<tr><td>Classe ${k}</td><td>${classLabels[k]||'Classe '+k}</td><td class="tr ${cls}">${fmtEur(v)}</td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:var(--t3)">Aucune donnée</td></tr>';
+  c.innerHTML = `<div class="g2">
+    <div class="card"><div class="ch"><div class="ct">Actif</div><span class="tag tg">${fmtEur(data.total_actif)}</span></div>
+      <table><thead><tr><th>Classe</th><th>Libellé</th><th class="tr">Montant</th></tr></thead><tbody>
+        ${makeRows(data.actif,'pos')}
+        <tr class="sr"><td></td><td>TOTAL ACTIF</td><td class="tr" style="font-weight:800">${fmtEur(data.total_actif)}</td></tr>
+      </tbody></table></div>
+    <div class="card"><div class="ch"><div class="ct">Passif</div><span class="tag tr2">${fmtEur(data.total_passif)}</span></div>
+      <table><thead><tr><th>Classe</th><th>Libellé</th><th class="tr">Montant</th></tr></thead><tbody>
+        ${makeRows(data.passif,'neg')}
+        <tr class="sr"><td></td><td>TOTAL PASSIF</td><td class="tr" style="font-weight:800">${fmtEur(data.total_passif)}</td></tr>
+      </tbody></table></div>
+  </div>
+  <div class="card" style="text-align:center;padding:1.5rem">
+    <div class="ml">Exercice ${annee}</div>
+    <div style="font-size:28px;font-weight:800;color:${data.total_actif-data.total_passif>=0?'var(--g)':'var(--r)'}">${fmtEur(data.total_actif-data.total_passif)}</div>
+    <div style="font-size:12px;color:var(--t2)">Écart Actif - Passif</div>
+  </div>`;
 }
 
 // ── Compte de résultat ──
 async function loadResultat() {
-  const annee = new Date().getFullYear() - 1;
+  const annee = new Date().getFullYear()-1;
   const data = await api.get('/api/compta/resultat?annee='+annee);
-  if (!data) return;
-  const chTbody = document.querySelector('#p-resultat .g2 .card:first-child tbody');
-  const prTbody = document.querySelector('#p-resultat .g2 .card:last-child tbody');
-  if (chTbody) {
-    chTbody.innerHTML = `<tr><td>Classe 6</td><td>Total charges</td><td class="tr neg">${fmtEur(data.charges)}</td></tr>`;
-  }
-  if (prTbody) {
-    prTbody.innerHTML = `<tr><td>Classe 7</td><td>Total produits</td><td class="tr pos">${fmtEur(data.produits)}</td></tr>`;
-  }
-  const resEl = document.querySelector('#p-resultat .mv');
-  if (resEl) {
-    const resultat = data.resultat_net || ((data.produits||0) - (data.charges||0));
-    resEl.textContent = fmtEur(resultat);
-    resEl.style.color = resultat >= 0 ? 'var(--g)' : 'var(--r)';
-  }
+  const c = document.querySelector('#p-resultat .content');
+  if (!c||!data) return;
+  const rn = data.resultat_net||((data.produits||0)-(data.charges||0));
+  c.innerHTML = `
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Produits (classe 7)</div><div class="mv pos">${fmtEur(data.produits)}</div></div>
+      <div class="mc"><div class="ml">Charges (classe 6)</div><div class="mv neg">${fmtEur(data.charges)}</div></div>
+      <div class="mc"><div class="ml">Résultat net</div><div class="mv" style="color:${rn>=0?'var(--g)':'var(--r)'}">${fmtEur(rn)}</div></div>
+    </div>
+    <div class="card" style="text-align:center;padding:2rem">
+      <div style="font-size:11px;color:var(--t2);text-transform:uppercase;margin-bottom:8px">Résultat net — Exercice ${annee}</div>
+      <div style="font-size:42px;font-weight:800;color:${rn>=0?'var(--g)':'var(--r)'}">${fmtEur(rn)}</div>
+      <div style="font-size:13px;color:var(--t2);margin-top:8px">${rn>=0?'Exercice bénéficiaire ✓':'Exercice déficitaire'}</div>
+    </div>`;
 }
 
 // ── Ratios ──
 async function loadRatios() {
-  const annee = new Date().getFullYear() - 1;
+  const annee = new Date().getFullYear()-1;
   const data = await api.get('/api/compta/ratios?annee='+annee);
-  if (!data) return;
-  const ratioCards = document.querySelectorAll('#p-ratios .mc');
-  const mb = data.marge_brute||0, rn = data.rentabilite_nette||0, dso = data.dso||0, re = data.ratio_endettement||0;
-  const items = [
-    {label:'Marge brute', value: mb.toFixed(1)+'%', color: mb>30?'var(--g)':'var(--a)'},
-    {label:'Rentabilité nette', value: rn.toFixed(1)+'%', color: rn>0?'var(--g)':'var(--r)'},
-    {label:'DSO (jours)', value: Math.round(dso)+' j', color: dso<45?'var(--g)':dso<60?'var(--a)':'var(--r)'},
-    {label:'Endettement', value: re.toFixed(1)+'%', color: re<100?'var(--g)':'var(--r)'},
-  ];
-  items.forEach((item, i) => {
-    if (ratioCards[i]) ratioCards[i].innerHTML = `<div class="ml">${item.label}</div><div class="mv" style="color:${item.color}">${item.value}</div>`;
-  });
+  const c = document.querySelector('#p-ratios .content');
+  if (!c||!data) return;
+  const mb=data.marge_brute||0,rn=data.rentabilite_nette||0,dso=data.dso||0,re=data.ratio_endettement||0;
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Marge brute</div><div class="mv" style="color:${mb>30?'var(--g)':'var(--a)'}">${mb.toFixed(1)}%</div></div>
+      <div class="mc"><div class="ml">Rentabilité nette</div><div class="mv" style="color:${rn>0?'var(--g)':'var(--r)'}">${rn.toFixed(1)}%</div></div>
+      <div class="mc"><div class="ml">DSO (jours)</div><div class="mv" style="color:${dso<45?'var(--g)':dso<60?'var(--a)':'var(--r)'}">${Math.round(dso)} j</div></div>
+      <div class="mc"><div class="ml">Endettement</div><div class="mv" style="color:${re<100?'var(--g)':'var(--r)'}">${re.toFixed(1)}%</div></div>
+    </div>`;
 }
 
 // ── TVA ──
 async function loadTVA() {
   const annee = new Date().getFullYear();
   const data = await api.get('/api/declarations/tva?annee='+annee);
-  if (!data) return;
-  const tbody = document.querySelector('#p-decl-tva table tbody');
-  if (!tbody) return;
+  const c = document.querySelector('#p-decl-tva .content');
+  if (!c||!data) return;
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const items = data.mois || data.trimestres || [];
-  tbody.innerHTML = items.map(t => {
-    const net = (t.tva_collectee||0) - (t.tva_deductible||0);
-    const statut = t.declaration?.statut || '';
-    const cls = statut==='validee'?'tg':statut==='a_preparer'?'tw2':'tb2';
-    return `<tr>
-      <td>${moisNoms[t.mois]||t.mois||''} ${annee}</td>
-      <td class="tr">${fmtEur(t.tva_collectee||0)}</td>
-      <td class="tr">${fmtEur(t.tva_deductible||0)}</td>
-      <td class="tr ${net>0?'neg':'pos'}">${fmtEur(net)}</td>
-      <td><span class="tag ${cls}">${statut||'—'}</span></td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucune donnée TVA</td></tr>';
+  const items = data.mois||[];
+  const rows = items.filter(t=>(t.tva_collectee||0)>0||(t.tva_deductible||0)>0).map(t => {
+    const net=(t.tva_collectee||0)-(t.tva_deductible||0);
+    const st=t.declaration?.statut||'';
+    return `<tr><td>${moisNoms[t.mois]||''} ${annee}</td><td class="tr">${fmtEur(t.tva_collectee||0)}</td><td class="tr">${fmtEur(t.tva_deductible||0)}</td><td class="tr ${net>0?'neg':'pos'}">${fmtEur(net)}</td><td><span class="tag ${st==='validee'?'tg':st==='a_preparer'?'tw2':'tb2'}">${st||'—'}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  c.innerHTML = `
+    <div class="mg mg3"><div class="mc"><div class="ml">TVA collectée</div><div class="mv pos">${fmtEur(data.total_tva_collectee)}</div></div>
+    <div class="mc"><div class="ml">TVA déductible</div><div class="mv neg">${fmtEur(data.total_tva_deductible)}</div></div>
+    <div class="mc"><div class="ml">TVA nette</div><div class="mv" style="color:${data.total_tva_nette>0?'var(--r)':'var(--g)'}">${fmtEur(data.total_tva_nette)}</div></div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Détail mensuel ${annee}</div>
+    <table><thead><tr><th>Mois</th><th class="tr">Collectée</th><th class="tr">Déductible</th><th class="tr">Net</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // ── IS ──
 async function loadIS() {
-  const data = await api.get('/api/declarations/is?annee='+(new Date().getFullYear()-1));
-  if (!data) return;
-  const cards = document.querySelectorAll('#p-decl-is .mv');
-  if (cards[0]) { cards[0].textContent = fmtEur(data.resultat_fiscal||data.resultat||0); cards[0].style.color = (data.resultat_fiscal||0)>=0?'var(--g)':'var(--r)'; }
-  if (cards[1]) cards[1].textContent = fmtEur(data.is_total||data.is_du||0);
-  if (cards[2]) cards[2].textContent = fmtEur(data.acomptes_payes||data.acomptes||0);
+  const annee = new Date().getFullYear()-1;
+  const data = await api.get('/api/declarations/is?annee='+annee);
+  const c = document.querySelector('#p-decl-is .content');
+  if (!c||!data) return;
+  const rf=data.resultat_fiscal||data.resultat||0, is=data.is_total||data.is_du||0, ac=data.acomptes_payes||data.acomptes||0, reste=data.reste_a_payer||is-ac;
+  c.innerHTML = `
+    <div class="mg mg4"><div class="mc"><div class="ml">Résultat fiscal ${annee}</div><div class="mv" style="color:${rf>=0?'var(--g)':'var(--r)'}">${fmtEur(rf)}</div></div>
+    <div class="mc"><div class="ml">IS dû</div><div class="mv neg">${fmtEur(is)}</div></div>
+    <div class="mc"><div class="ml">Acomptes payés</div><div class="mv" style="color:var(--b)">${fmtEur(ac)}</div></div>
+    <div class="mc"><div class="ml">Reste à payer</div><div class="mv" style="color:${reste>0?'var(--r)':'var(--g)'}">${fmtEur(reste)}</div></div></div>
+    <div class="card" style="text-align:center;padding:1.5rem">
+      <div style="font-size:11px;color:var(--t2);text-transform:uppercase;margin-bottom:8px">IS — Exercice ${annee}</div>
+      <div style="font-size:36px;font-weight:800;color:${rf>=0?'var(--b)':'var(--r)'}">${fmtEur(is)}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px">${rf<0?'Déficit reportable — pas d\'IS':'Taux effectif : '+(rf>0?((is/rf)*100).toFixed(1):0)+'%'}</div>
+    </div>`;
 }
 
 // ── URSSAF ──
 async function loadURSSAF() {
   const annee = new Date().getFullYear();
   const data = await api.get('/api/declarations/urssaf?annee='+annee);
-  if (!data) return;
-  const tbody = document.querySelector('#p-decl-urssaf table tbody');
-  if (!tbody) return;
+  const c = document.querySelector('#p-decl-urssaf .content');
+  if (!c||!data) return;
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const items = data.mois || (Array.isArray(data) ? data : []);
-  tbody.innerHTML = items.map(m => {
-    const total = (m.cotis_salariales||0)+(m.cotis_patronales||0);
-    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
-    <td class="tr">${fmtEur(m.cotis_salariales||0)}</td>
-    <td class="tr">${fmtEur(m.cotis_patronales||0)}</td>
-    <td class="tr neg">${fmtEur(total)}</td></tr>`;
-  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+  const items = data.mois||(Array.isArray(data)?data:[]);
+  const rows = items.map(m => {
+    const total=(m.cotis_salariales||0)+(m.cotis_patronales||0);
+    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td><td class="tr">${fmtEur(m.cotis_salariales||0)}</td><td class="tr">${fmtEur(m.cotis_patronales||0)}</td><td class="tr neg">${fmtEur(total)}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  const totalCS=items.reduce((s,m)=>s+(m.cotis_salariales||0),0), totalCP=items.reduce((s,m)=>s+(m.cotis_patronales||0),0);
+  c.innerHTML = `
+    <div class="mg mg3"><div class="mc"><div class="ml">Cotis. salariales YTD</div><div class="mv neg">${fmtEur(totalCS)}</div></div>
+    <div class="mc"><div class="ml">Cotis. patronales YTD</div><div class="mv neg">${fmtEur(totalCP)}</div></div>
+    <div class="mc"><div class="ml">Total YTD</div><div class="mv neg">${fmtEur(totalCS+totalCP)}</div></div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Cotisations mensuelles ${annee}</div>
+    <table><thead><tr><th>Mois</th><th class="tr">Salariales</th><th class="tr">Patronales</th><th class="tr">Total</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // ── DSN ──
 async function loadDSN() {
-  const now = new Date();
-  const mois = now.getMonth() || 12;
-  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const now = new Date(); const mois = now.getMonth()||12; const annee = mois===12?now.getFullYear()-1:now.getFullYear();
   const data = await api.get('/api/declarations/dsn?annee='+annee+'&mois='+mois);
-  if (!data) return;
-  const tbody = document.getElementById('dsn-tbody');
-  if (!tbody) return;
-  const emps = data.employes||[];
-  let totBrut=0,totNet=0,totPas=0;
-  tbody.innerHTML = emps.map(e => {
-    totBrut+=(e.salaire_brut||0); totNet+=(e.net_imposable||e.net_a_payer||0); totPas+=(e.retenue_pas||0);
-    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.salaire_brut)}</td>
-    <td class="tr">${fmtEur(e.net_imposable||e.net_a_payer)}</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td>
-    <td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`;
-  }).join('') || '<tr><td colspan="5">Aucun bulletin</td></tr>';
-  if (emps.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(totBrut)}</td><td class="tr">${fmtEur(totNet)}</td><td class="tr neg">${fmtEur(totPas)}</td><td></td></tr>`;
+  const c = document.querySelector('#p-dsn .content');
+  if (!c||!data) return;
+  const emps = data.employes||[]; let tB=0,tN=0,tP=0;
+  const rows = emps.map(e => { tB+=(e.salaire_brut||0);tN+=(e.net_imposable||e.net_a_payer||0);tP+=(e.retenue_pas||0);
+    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.salaire_brut)}</td><td class="tr">${fmtEur(e.net_imposable||e.net_a_payer)}</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td><td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucun bulletin</td></tr>';
+  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">Masse salariale</div><div class="mv">${fmtEur(tB)}</div></div>
+    <div class="mc"><div class="ml">PAS total</div><div class="mv neg">${fmtEur(tP)}</div></div>
+    <div class="mc"><div class="ml">Employés</div><div class="mv" style="color:var(--b)">${emps.length}</div></div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">DSN ${mois}/${annee}</div>
+    <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead><tbody>${rows}${emps.length?`<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(tB)}</td><td class="tr">${fmtEur(tN)}</td><td class="tr neg">${fmtEur(tP)}</td><td></td></tr>`:''}</tbody></table></div>`;
 }
 
 // ── RAS (PAS) ──
 async function loadRAS() {
-  const now = new Date();
-  const mois = now.getMonth() || 12;
-  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const now = new Date(); const mois = now.getMonth()||12; const annee = mois===12?now.getFullYear()-1:now.getFullYear();
   const data = await api.get('/api/declarations/ras?annee='+annee+'&mois='+mois);
-  if (!data) return;
-  const tbody = document.getElementById('ras-tbody');
-  if (!tbody) return;
-  const emps = data.employes||data.detail||[];
-  let totNet=0, totPas=0;
-  tbody.innerHTML = emps.map(e => {
-    totNet+=(e.net_imposable||0); totPas+=(e.retenue_pas||0);
-    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.net_imposable||0)}</td>
-    <td class="tr">${(e.taux_pas||0).toFixed(1)}%</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td></tr>`;
-  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
-  if (emps.length) tbody.innerHTML += `<tr class="subr"><td>Total</td><td class="tr">${fmtEur(totNet)}</td><td></td><td class="tr neg">${fmtEur(totPas)}</td></tr>`;
+  const c = document.querySelector('#p-ras .content');
+  if (!c||!data) return;
+  const emps = data.employes||data.detail||[]; let tN=0,tP=0;
+  const rows = emps.map(e => { tN+=(e.net_imposable||0);tP+=(e.retenue_pas||0);
+    return `<tr><td>${e.nom||''} ${e.prenom||''}</td><td class="tr">${fmtEur(e.net_imposable||0)}</td><td class="tr">${(e.taux_pas||0).toFixed(1)}%</td><td class="tr neg">${fmtEur(e.retenue_pas||0)}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  c.innerHTML = `<div class="card" style="text-align:center;padding:1.5rem;margin-bottom:1rem"><div class="ml">Total PAS à reverser — ${mois}/${annee}</div><div style="font-size:36px;font-weight:800;color:var(--r)">${fmtEur(tP)}</div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Détail par employé</div>
+    <table><thead><tr><th>Employé</th><th class="tr">Net imposable</th><th>Taux PAS</th><th class="tr">RAS</th></tr></thead><tbody>${rows}${emps.length?`<tr class="subr"><td>Total</td><td class="tr">${fmtEur(tN)}</td><td></td><td class="tr neg">${fmtEur(tP)}</td></tr>`:''}</tbody></table></div>`;
 }
 
 // ── Budget ──
 async function loadBudget() {
   const annee = new Date().getFullYear();
   const data = await api.get('/api/declarations/budget?annee='+annee);
-  if (!data) return;
-  const tbody = document.querySelector('#p-budget table tbody');
-  if (!tbody) return;
+  const c = document.querySelector('#p-budget .content');
+  if (!c||!data) return;
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const items = data.mois || (Array.isArray(data) ? data : []);
-  tbody.innerHTML = items.map(m => {
-    const ca = m.ca||m.revenus||0, dep = m.depenses||m.charges||0;
-    const ecart = ca - dep;
-    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
-    <td class="tr pos">${fmtEur(ca)}</td><td class="tr neg">${fmtEur(dep)}</td>
-    <td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td></tr>`;
-  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+  const items = data.mois||(Array.isArray(data)?data:[]);
+  const rows = items.map(m => {
+    const ca=m.ca||m.revenus||0,dep=m.depenses||m.charges||0,ecart=ca-dep;
+    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td><td class="tr pos">${fmtEur(ca)}</td><td class="tr neg">${fmtEur(dep)}</td><td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td></tr>`;
+  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  const tCA=items.reduce((s,m)=>s+(m.ca||m.revenus||0),0),tD=items.reduce((s,m)=>s+(m.depenses||m.charges||0),0);
+  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">CA YTD</div><div class="mv pos">${fmtEur(tCA)}</div></div>
+    <div class="mc"><div class="ml">Dépenses YTD</div><div class="mv neg">${fmtEur(tD)}</div></div>
+    <div class="mc"><div class="ml">Résultat YTD</div><div class="mv" style="color:${tCA-tD>=0?'var(--g)':'var(--r)'}">${fmtEur(tCA-tD)}</div></div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Budget mensuel ${annee}</div>
+    <table><thead><tr><th>Mois</th><th class="tr">CA</th><th class="tr">Dépenses</th><th class="tr">Résultat</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 // ── Journal de paie ──
 async function loadJournalPaie() {
-  const now = new Date();
-  const mois = now.getMonth() || 12;
-  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
+  const now = new Date(); const mois = now.getMonth()||12; const annee = mois===12?now.getFullYear()-1:now.getFullYear();
   const data = await api.get('/api/paie/bulletins/'+annee+'/'+mois);
-  if (!data) return;
-  const tbody = document.getElementById('journal-paie-tbody');
-  if (!tbody) return;
-  const bulletins = data.bulletins||[];
-  let tBrut=0,tCS=0,tCP=0,tNI=0,tPas=0,tNet=0;
-  tbody.innerHTML = bulletins.map(b => {
-    tBrut+=(b.salaire_brut||0); tCS+=(b.cotis_salariales||0); tCP+=(b.cotis_patronales||0);
-    tNI+=(b.net_imposable||0); tPas+=(b.retenue_pas||0); tNet+=(b.net_a_payer||0);
-    return `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(b.salaire_brut)}</td>
-    <td class="tr neg">${fmtEur(b.cotis_salariales||0)}</td><td class="tr neg">${fmtEur(b.cotis_patronales||0)}</td>
-    <td class="tr">${fmtEur(b.net_imposable||0)}</td><td class="tr neg">${fmtEur(b.retenue_pas||0)}</td>
-    <td class="tr pos">${fmtEur(b.net_a_payer)}</td></tr>`;
-  }).join('') || '<tr><td colspan="7">Aucun bulletin ce mois</td></tr>';
-  if (bulletins.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(tBrut)}</td><td class="tr neg">${fmtEur(tCS)}</td><td class="tr neg">${fmtEur(tCP)}</td><td class="tr">${fmtEur(tNI)}</td><td class="tr neg">${fmtEur(tPas)}</td><td class="tr pos">${fmtEur(tNet)}</td></tr>`;
-  setVal('jp-masse', fmtEur(tBrut));
-  setVal('jp-charges', fmtEur(tCP));
-  setVal('jp-cout', fmtEur(tBrut+tCP));
+  const c = document.querySelector('#p-journal-paie .content');
+  if (!c||!data) return;
+  const bulletins = data.bulletins||[]; let tB=0,tCS=0,tCP=0,tN=0;
+  const rows = bulletins.map(b => { tB+=(b.salaire_brut||0);tCS+=(b.cotis_salariales||0);tCP+=(b.cotis_patronales||0);tN+=(b.net_a_payer||0);
+    return `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(b.salaire_brut)}</td><td class="tr neg">${fmtEur(b.cotis_salariales||0)}</td><td class="tr neg">${fmtEur(b.cotis_patronales||0)}</td><td class="tr pos">${fmtEur(b.net_a_payer)}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucun bulletin</td></tr>';
+  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">${fmtEur(tB)}</div></div>
+    <div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">${fmtEur(tCP)}</div></div>
+    <div class="mc"><div class="ml">Coût total employeur</div><div class="mv">${fmtEur(tB+tCP)}</div></div></div>
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Journal — ${mois}/${annee}</div>
+    <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Cotis. sal.</th><th class="tr">Cotis. pat.</th><th class="tr">Net payé</th></tr></thead><tbody>${rows}${bulletins.length?`<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(tB)}</td><td class="tr neg">${fmtEur(tCS)}</td><td class="tr neg">${fmtEur(tCP)}</td><td class="tr pos">${fmtEur(tN)}</td></tr>`:''}</tbody></table></div>`;
 }
 
 </script>
