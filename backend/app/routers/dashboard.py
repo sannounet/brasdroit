@@ -1,10 +1,11 @@
 """
 Routes API — Dashboard, Alertes, IA
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import date, timedelta
+from typing import Optional
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -15,53 +16,90 @@ from app.services.ia_service import question_ia
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard et IA"])
 
 
-@router.get("/stats", response_model=DashboardStats)
-def get_stats(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get("/stats")
+def get_stats(
+    periode: Optional[str] = Query("mois", description="mois, semaine, trimestre"),
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Chiffres clés pour le tableau de bord."""
     eid = current_user.entreprise_id
     today = date.today()
-    debut_mois = today.replace(day=1)
 
-    # CA ce mois (factures réglées ce mois)
-    ca_mois = db.query(func.sum(Facture.montant_ht)).filter(
+    # Calculer les dates de début selon la période
+    if periode == "semaine":
+        debut = today - timedelta(days=today.weekday())
+    elif periode == "trimestre":
+        mois_trim = ((today.month - 1) // 3) * 3 + 1
+        debut = today.replace(month=mois_trim, day=1)
+    else:  # mois
+        debut = today.replace(day=1)
+
+    # CA période (factures réglées dans la période)
+    ca = db.query(func.sum(Facture.montant_ht)).filter(
         Facture.entreprise_id == eid,
         Facture.statut == StatutFacture.reglee,
-        Facture.date_paiement >= debut_mois
+        Facture.date_paiement >= debut,
     ).scalar() or 0
 
-    # Impayés
+    # Impayés (toujours total)
     impayes = db.query(func.sum(Facture.montant_ttc)).filter(
         Facture.entreprise_id == eid,
-        Facture.statut.in_([StatutFacture.en_retard, StatutFacture.judiciaire])
+        Facture.statut.in_([StatutFacture.en_retard, StatutFacture.judiciaire]),
     ).scalar() or 0
 
-    # Trésorerie (derniers mouvements bancaires)
-    dernier_solde = db.query(func.sum(MouvementBancaire.montant)).filter(
-        MouvementBancaire.entreprise_id == eid
+    # Trésorerie
+    tresorerie = db.query(func.sum(MouvementBancaire.montant)).filter(
+        MouvementBancaire.entreprise_id == eid,
+    ).scalar() or 0
+
+    # Obligations de la période (déclarations à payer)
+    obligations = db.query(func.sum(Declaration.montant)).filter(
+        Declaration.entreprise_id == eid,
+        Declaration.statut == StatutDeclaration.a_preparer,
+        Declaration.date_echeance >= debut,
+        Declaration.date_echeance <= debut + timedelta(days=90),
     ).scalar() or 0
 
     # Déclarations urgentes (< 7 jours)
     urgentes = db.query(Declaration).filter(
         Declaration.entreprise_id == eid,
         Declaration.statut == StatutDeclaration.a_preparer,
-        Declaration.date_echeance <= today + timedelta(days=7)
+        Declaration.date_echeance <= today + timedelta(days=7),
     ).count()
 
     # Factures en retard
     nb_retard = db.query(func.count(Facture.id)).filter(
         Facture.entreprise_id == eid,
-        Facture.statut == StatutFacture.en_retard
+        Facture.statut == StatutFacture.en_retard,
     ).scalar() or 0
 
-    return DashboardStats(
-        ca_mois=float(ca_mois),
-        tresorerie=float(dernier_solde),
-        impayes=float(impayes),
-        obligations_mois=0.0,
-        nb_alertes_urgentes=urgentes,
-        nb_factures_en_retard=nb_retard,
-        score_sante=72,  # À calculer dynamiquement
-    )
+    # Score de santé simplifié
+    score = 50
+    if float(impayes) == 0:
+        score += 20
+    elif float(impayes) < 10000:
+        score += 10
+    if float(tresorerie) > 20000:
+        score += 15
+    elif float(tresorerie) > 0:
+        score += 5
+    if nb_retard == 0:
+        score += 15
+    elif nb_retard <= 2:
+        score += 5
+
+    return {
+        "periode": periode,
+        "debut": str(debut),
+        "ca_mois": float(ca),
+        "tresorerie": float(tresorerie),
+        "impayes": float(impayes),
+        "obligations_mois": float(obligations),
+        "nb_alertes_urgentes": urgentes,
+        "nb_factures_en_retard": nb_retard,
+        "score_sante": min(score, 100),
+    }
 
 
 @router.get("/alertes")
@@ -74,7 +112,7 @@ def get_alertes(current_user=Depends(get_current_user), db: Session = Depends(ge
     # Factures en retard
     factures_retard = db.query(Facture).filter(
         Facture.entreprise_id == eid,
-        Facture.statut == StatutFacture.en_retard
+        Facture.statut == StatutFacture.en_retard,
     ).all()
     for f in factures_retard:
         jours = (today - f.date_echeance).days if f.date_echeance else 0
@@ -91,7 +129,7 @@ def get_alertes(current_user=Depends(get_current_user), db: Session = Depends(ge
         Declaration.entreprise_id == eid,
         Declaration.statut == StatutDeclaration.a_preparer,
         Declaration.date_echeance >= today,
-        Declaration.date_echeance <= today + timedelta(days=30)
+        Declaration.date_echeance <= today + timedelta(days=30),
     ).all()
     for d in declarations:
         jours_restants = (d.date_echeance - today).days
@@ -112,10 +150,9 @@ def poser_question_ia(data: IAQuestion, current_user=Depends(get_current_user), 
     """Pose une question à l'IA avec le contexte financier de l'entreprise."""
     eid = current_user.entreprise_id
 
-    # Construire le contexte
     impayes = db.query(func.sum(Facture.montant_ttc)).filter(
         Facture.entreprise_id == eid,
-        Facture.statut.in_([StatutFacture.en_retard, StatutFacture.judiciaire])
+        Facture.statut.in_([StatutFacture.en_retard, StatutFacture.judiciaire]),
     ).scalar() or 0
 
     contexte = {

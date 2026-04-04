@@ -302,7 +302,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- DASHBOARD -->
 <div id="p-dashboard" class="panel active">
 <div class="topbar"><div class="tb-l"><div class="pt">Tableau de bord</div><div class="ps">Avril 2026 &middot; Donnees en temps reel</div></div>
-<div class="tb-r"><select class="sel"><option>Ce mois</option><option>Cette semaine</option><option>Ce trimestre</option></select><button class="btn btn-p">&#8681; Exporter</button><button class="btn" onclick="logout()" style="margin-left:6px">&#8594; Deconnexion</button></div></div>
+<div class="tb-r"><select class="sel" id="dash-periode" onchange="loadDashboard()"><option value="mois">Ce mois</option><option value="semaine">Cette semaine</option><option value="trimestre">Ce trimestre</option></select><button class="btn btn-p" onclick="exportDashboard()">&#8681; Exporter</button><button class="btn" onclick="logout()" style="margin-left:6px">&#8594; Deconnexion</button></div></div>
 <div class="content">
 <div class="fd"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">8 alertes urgentes &mdash; action requise aujourd'hui</div><div class="fdesc">TVA CA3 (05/04 &middot; 7 880&euro;) &middot; URSSAF (31/03 &middot; 3 240&euro;) &middot; DSN (05/04) &middot; Fournisseur Legrand (J-2) &middot; Impaye Andorno (17 040&euro;)</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button><button class="btn btn-sm" onclick="go('decl-tva')">Preparer TVA</button></div></div></div>
 <div class="mg mg4">
@@ -1675,17 +1675,56 @@ async function register(email, password, prenom, nom, entreprise_nom) {
 
 // ── Dashboard ──
 async function loadDashboard() {
-  const stats = await api.get('/api/dashboard/stats');
+  const sel = document.getElementById('dash-periode');
+  const periode = sel ? sel.value : 'mois';
+  const periodeLabel = {mois:'Ce mois',semaine:'Cette semaine',trimestre:'Ce trimestre'}[periode]||'Ce mois';
+  const stats = await api.get('/api/dashboard/stats?periode='+periode);
   if (!stats) return;
-  setVal('dash-ca', fmtEur(stats.ca_mois));
-  setVal('dash-treso', fmtEur(stats.tresorerie));
-  setVal('dash-impayes', fmtEur(stats.impayes));
-  setVal('dash-alertes', stats.nb_alertes_urgentes);
-  const alertBanner = document.getElementById('dash-alert-banner');
-  if (alertBanner && stats.nb_alertes_urgentes > 0) {
-    alertBanner.style.display = 'flex';
-    document.getElementById('dash-alert-count').textContent = stats.nb_alertes_urgentes;
-  }
+  const c = document.querySelector('#p-dashboard .content');
+  if (!c) return;
+  const score = stats.score_sante||0;
+  const scoreColor = score>=75?'var(--g)':score>=50?'var(--a)':'var(--r)';
+  c.innerHTML = `
+    ${stats.nb_alertes_urgentes>0?`<div class="fd"><div class="fic">⚠</div><div class="fb"><div class="ftt">${stats.nb_alertes_urgentes} alertes urgentes — action requise</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button></div></div></div>`:''}
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">CA ${periodeLabel.toLowerCase()}</div><div class="mv" style="color:var(--b)">${fmtEur(stats.ca_mois)}</div><div class="mbar"><div class="mbf" style="width:${Math.min(stats.ca_mois/1000,100)}%;background:var(--b)"></div></div></div>
+      <div class="mc"><div class="ml">Trésorerie banque</div><div class="mv" style="color:var(--g)">${fmtEur(stats.tresorerie)}</div><div class="mt neu">Temps réel</div></div>
+      <div class="mc"><div class="ml">Impayés en cours</div><div class="mv" style="color:var(--r)">${fmtEur(stats.impayes)}</div><div class="mt down">${stats.nb_factures_en_retard} dossier(s)</div></div>
+      <div class="mc"><div class="ml">Obligations</div><div class="mv" style="color:var(--a)">${fmtEur(stats.obligations_mois)}</div><div class="mt">Déclarations à payer</div></div>
+    </div>
+    <div class="g3">
+      <div class="card" style="text-align:center;padding:1.25rem"><div class="ct" style="margin-bottom:.5rem">Score santé financière</div>
+        <div style="font-size:42px;font-weight:800;color:${scoreColor}">${score}<span style="font-size:20px;color:var(--t3)">/100</span></div>
+        <div style="font-size:11.5px;color:var(--t2);margin-top:4px">${score>=75?'Bonne santé ✓':score>=50?'Score moyen — points à corriger':'Attention requise'}</div>
+      </div>
+      <div class="card"><div class="ct" style="margin-bottom:.6rem">Résumé période</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Période</span><span style="font-weight:600">${periodeLabel} (depuis ${stats.debut})</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Factures en retard</span><span style="font-weight:600;color:${stats.nb_factures_en_retard>0?'var(--r)':'var(--g)'}">${stats.nb_factures_en_retard}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--t2)">Alertes urgentes</span><span style="font-weight:600;color:${stats.nb_alertes_urgentes>0?'var(--r)':'var(--g)'}">${stats.nb_alertes_urgentes}</span></div>
+        </div>
+      </div>
+      <div class="card"><div class="ct" style="margin-bottom:.6rem">Actions rapides</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn" style="width:100%" onclick="go('factures')">Factures →</button>
+          <button class="btn" style="width:100%" onclick="go('treso')">Trésorerie →</button>
+          <button class="btn" style="width:100%" onclick="go('alertes')">Alertes →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function exportDashboard() {
+  const content = document.querySelector('#p-dashboard .content');
+  if (!content) return;
+  const w = window.open('','','width=800,height=600');
+  w.document.write('<html><head><title>Bras Droit — Export Dashboard</title><style>body{font-family:sans-serif;padding:2rem}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;text-align:left}</style></head><body>');
+  w.document.write('<h1>Bras Droit — Tableau de bord</h1>');
+  w.document.write('<p>Exporté le '+new Date().toLocaleDateString('fr-FR')+'</p>');
+  w.document.write(content.innerHTML);
+  w.document.write('</body></html>');
+  w.document.close();
+  w.print();
 }
 
 async function loadAlertes() {
