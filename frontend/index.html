@@ -2183,18 +2183,22 @@ async function loadBilan() {
   const annee = new Date().getFullYear() - 1;
   const data = await api.get('/api/compta/bilan?annee='+annee);
   if (!data) return;
+  const classLabels = {1:'Capitaux',2:'Immobilisations',3:'Stocks',4:'Tiers',5:'Trésorerie'};
   const actifTbody = document.querySelector('#p-bilan .g2 .card:first-child tbody');
   const passifTbody = document.querySelector('#p-bilan .g2 .card:last-child tbody');
+  const toArray = (obj) => Object.entries(obj||{}).map(([k,v]) => ({classe:k, libelle:classLabels[k]||'Classe '+k, montant:v}));
   if (actifTbody) {
-    actifTbody.innerHTML = (data.actif||[]).map(a =>
-      `<tr><td class="mono">${a.compte}</td><td>${a.libelle}</td><td class="tr pos">${fmtEur(a.montant)}</td></tr>`
-    ).join('');
+    const items = toArray(data.actif);
+    actifTbody.innerHTML = items.map(a =>
+      `<tr><td>Classe ${a.classe}</td><td>${a.libelle}</td><td class="tr pos">${fmtEur(a.montant)}</td></tr>`
+    ).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucune donnée</td></tr>';
     actifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL ACTIF</td><td class="tr">${fmtEur(data.total_actif)}</td></tr>`;
   }
   if (passifTbody) {
-    passifTbody.innerHTML = (data.passif||[]).map(p =>
-      `<tr><td class="mono">${p.compte}</td><td>${p.libelle}</td><td class="tr neg">${fmtEur(p.montant)}</td></tr>`
-    ).join('');
+    const items = toArray(data.passif);
+    passifTbody.innerHTML = items.map(p =>
+      `<tr><td>Classe ${p.classe}</td><td>${p.libelle}</td><td class="tr neg">${fmtEur(p.montant)}</td></tr>`
+    ).join('') || '<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucune donnée</td></tr>';
     passifTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL PASSIF</td><td class="tr">${fmtEur(data.total_passif)}</td></tr>`;
   }
 }
@@ -2207,20 +2211,14 @@ async function loadResultat() {
   const chTbody = document.querySelector('#p-resultat .g2 .card:first-child tbody');
   const prTbody = document.querySelector('#p-resultat .g2 .card:last-child tbody');
   if (chTbody) {
-    chTbody.innerHTML = (data.charges||[]).map(c =>
-      `<tr><td class="mono">${c.compte}</td><td>${c.libelle}</td><td class="tr neg">${fmtEur(c.montant)}</td></tr>`
-    ).join('');
-    chTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL CHARGES</td><td class="tr">${fmtEur(data.total_charges)}</td></tr>`;
+    chTbody.innerHTML = `<tr><td>Classe 6</td><td>Total charges</td><td class="tr neg">${fmtEur(data.charges)}</td></tr>`;
   }
   if (prTbody) {
-    prTbody.innerHTML = (data.produits||[]).map(p =>
-      `<tr><td class="mono">${p.compte}</td><td>${p.libelle}</td><td class="tr pos">${fmtEur(p.montant)}</td></tr>`
-    ).join('');
-    prTbody.innerHTML += `<tr class="sr"><td></td><td>TOTAL PRODUITS</td><td class="tr">${fmtEur(data.total_produits)}</td></tr>`;
+    prTbody.innerHTML = `<tr><td>Classe 7</td><td>Total produits</td><td class="tr pos">${fmtEur(data.produits)}</td></tr>`;
   }
   const resEl = document.querySelector('#p-resultat .mv');
   if (resEl) {
-    const resultat = (data.total_produits||0) - (data.total_charges||0);
+    const resultat = data.resultat_net || ((data.produits||0) - (data.charges||0));
     resEl.textContent = fmtEur(resultat);
     resEl.style.color = resultat >= 0 ? 'var(--g)' : 'var(--r)';
   }
@@ -2231,65 +2229,68 @@ async function loadRatios() {
   const annee = new Date().getFullYear() - 1;
   const data = await api.get('/api/compta/ratios?annee='+annee);
   if (!data) return;
-  const container = document.querySelector('#p-ratios .content');
-  if (!container) return;
+  const ratioCards = document.querySelectorAll('#p-ratios .mc');
+  const mb = data.marge_brute||0, rn = data.rentabilite_nette||0, dso = data.dso||0, re = data.ratio_endettement||0;
   const items = [
-    {label:'Marge brute', value: (data.marge_brute||0).toFixed(1)+'%', color: data.marge_brute>30?'var(--g)':'var(--a)'},
-    {label:'Rentabilité nette', value: (data.rentabilite_nette||0).toFixed(1)+'%', color: data.rentabilite_nette>0?'var(--g)':'var(--r)'},
-    {label:'DSO (jours)', value: Math.round(data.dso||0)+' j', color: data.dso<45?'var(--g)':data.dso<60?'var(--a)':'var(--r)'},
-    {label:'Endettement', value: (data.ratio_endettement||0).toFixed(1)+'%', color: data.ratio_endettement<100?'var(--g)':'var(--r)'},
+    {label:'Marge brute', value: mb.toFixed(1)+'%', color: mb>30?'var(--g)':'var(--a)'},
+    {label:'Rentabilité nette', value: rn.toFixed(1)+'%', color: rn>0?'var(--g)':'var(--r)'},
+    {label:'DSO (jours)', value: Math.round(dso)+' j', color: dso<45?'var(--g)':dso<60?'var(--a)':'var(--r)'},
+    {label:'Endettement', value: re.toFixed(1)+'%', color: re<100?'var(--g)':'var(--r)'},
   ];
-  const ratioCards = container.querySelectorAll('.mc');
   items.forEach((item, i) => {
-    if (ratioCards[i]) {
-      ratioCards[i].innerHTML = `<div class="ml">${item.label}</div><div class="mv" style="color:${item.color}">${item.value}</div>`;
-    }
+    if (ratioCards[i]) ratioCards[i].innerHTML = `<div class="ml">${item.label}</div><div class="mv" style="color:${item.color}">${item.value}</div>`;
   });
 }
 
 // ── TVA ──
 async function loadTVA() {
-  const data = await api.get('/api/declarations/tva?annee='+new Date().getFullYear());
+  const annee = new Date().getFullYear();
+  const data = await api.get('/api/declarations/tva?annee='+annee);
   if (!data) return;
   const tbody = document.querySelector('#p-decl-tva table tbody');
   if (!tbody) return;
-  tbody.innerHTML = (data.trimestres||data||[]).map(t => {
+  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const items = data.mois || data.trimestres || [];
+  tbody.innerHTML = items.map(t => {
     const net = (t.tva_collectee||0) - (t.tva_deductible||0);
+    const statut = t.declaration?.statut || '';
+    const cls = statut==='validee'?'tg':statut==='a_preparer'?'tw2':'tb2';
     return `<tr>
-      <td>${t.periode||t.periode_mois||''}</td>
+      <td>${moisNoms[t.mois]||t.mois||''} ${annee}</td>
       <td class="tr">${fmtEur(t.tva_collectee||0)}</td>
       <td class="tr">${fmtEur(t.tva_deductible||0)}</td>
       <td class="tr ${net>0?'neg':'pos'}">${fmtEur(net)}</td>
-      <td><span class="tag ${t.statut==='validee'?'tg':t.statut==='a_preparer'?'tw2':'tb2'}">${t.statut||''}</span></td>
+      <td><span class="tag ${cls}">${statut||'—'}</span></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucune déclaration TVA</td></tr>';
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucune donnée TVA</td></tr>';
 }
 
 // ── IS ──
 async function loadIS() {
   const data = await api.get('/api/declarations/is?annee='+(new Date().getFullYear()-1));
   if (!data) return;
-  const container = document.querySelector('#p-decl-is .content');
-  if (!container) return;
-  const cards = container.querySelectorAll('.mv');
-  if (cards[0]) cards[0].textContent = fmtEur(data.resultat_fiscal||0);
-  if (cards[1]) cards[1].textContent = fmtEur(data.is_total||0);
-  if (cards[2]) cards[2].textContent = fmtEur(data.acomptes_payes||0);
+  const cards = document.querySelectorAll('#p-decl-is .mv');
+  if (cards[0]) { cards[0].textContent = fmtEur(data.resultat_fiscal||data.resultat||0); cards[0].style.color = (data.resultat_fiscal||0)>=0?'var(--g)':'var(--r)'; }
+  if (cards[1]) cards[1].textContent = fmtEur(data.is_total||data.is_du||0);
+  if (cards[2]) cards[2].textContent = fmtEur(data.acomptes_payes||data.acomptes||0);
 }
 
 // ── URSSAF ──
 async function loadURSSAF() {
-  const data = await api.get('/api/declarations/urssaf?annee='+new Date().getFullYear());
+  const annee = new Date().getFullYear();
+  const data = await api.get('/api/declarations/urssaf?annee='+annee);
   if (!data) return;
   const tbody = document.querySelector('#p-decl-urssaf table tbody');
   if (!tbody) return;
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  tbody.innerHTML = (data.mois||data||[]).map(m =>
-    `<tr><td>${moisNoms[m.mois]||m.mois} ${m.annee||''}</td>
+  const items = data.mois || (Array.isArray(data) ? data : []);
+  tbody.innerHTML = items.map(m => {
+    const total = (m.cotis_salariales||0)+(m.cotis_patronales||0);
+    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
     <td class="tr">${fmtEur(m.cotis_salariales||0)}</td>
     <td class="tr">${fmtEur(m.cotis_patronales||0)}</td>
-    <td class="tr neg">${fmtEur((m.cotis_salariales||0)+(m.cotis_patronales||0))}</td></tr>`
-  ).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
+    <td class="tr neg">${fmtEur(total)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
 }
 
 // ── DSN ──
@@ -2333,15 +2334,18 @@ async function loadRAS() {
 
 // ── Budget ──
 async function loadBudget() {
-  const data = await api.get('/api/declarations/budget?annee='+new Date().getFullYear());
+  const annee = new Date().getFullYear();
+  const data = await api.get('/api/declarations/budget?annee='+annee);
   if (!data) return;
   const tbody = document.querySelector('#p-budget table tbody');
   if (!tbody) return;
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  tbody.innerHTML = (data.mois||data||[]).map(m => {
-    const ecart = (m.ca||0) - (m.depenses||0);
-    return `<tr><td>${moisNoms[m.mois]||m.mois}</td>
-    <td class="tr pos">${fmtEur(m.ca||0)}</td><td class="tr neg">${fmtEur(m.depenses||0)}</td>
+  const items = data.mois || (Array.isArray(data) ? data : []);
+  tbody.innerHTML = items.map(m => {
+    const ca = m.ca||m.revenus||0, dep = m.depenses||m.charges||0;
+    const ecart = ca - dep;
+    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
+    <td class="tr pos">${fmtEur(ca)}</td><td class="tr neg">${fmtEur(dep)}</td>
     <td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td></tr>`;
   }).join('') || '<tr><td colspan="4">Aucune donnée</td></tr>';
 }
