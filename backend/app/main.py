@@ -68,25 +68,5 @@ def health():
     return {"status": "healthy"}
 
 
-@app.post("/seed-2026")
-def run_seed_2026(entreprise_id: int = 0):
-    """Seed 2026 — À SUPPRIMER après usage."""
-    from sqlalchemy import text
-    from app.core.database import SessionLocal
-    from app.seed_2026 import seed_2026
-    db = SessionLocal()
-    try:
-        if entreprise_id == 0:
-            row = db.execute(text("SELECT id FROM entreprises ORDER BY id DESC LIMIT 1")).fetchone()
-            if not row:
-                return {"status": "error", "detail": "Aucune entreprise"}
-            entreprise_id = row[0]
-        result = seed_2026(db, entreprise_id)
-        return {"status": "ok", "entreprise_id": entreprise_id, "inserted": result}
-    except Exception as e:
-        db.rollback()
-        return {"status": "error", "detail": str(e)}
-    finally:
-        db.close()
 
 
