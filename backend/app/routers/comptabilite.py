@@ -38,26 +38,31 @@ def list_ecritures(
     return q.order_by(Ecriture.date_ecriture.desc()).all()
 
 
+from pydantic import BaseModel as _BM
+
+class _EcritureIn(_BM):
+    date_ecriture: str
+    compte_debit: str
+    compte_credit: str
+    libelle: str
+    montant: float
+    numero_piece: Optional[str] = None
+
 @router.post("/ecritures")
 def create_ecriture(
-    date_ecriture: str = Query(...),
-    compte_debit: str = Query(...),
-    compte_credit: str = Query(...),
-    libelle: str = Query(...),
-    montant: float = Query(...),
-    numero_piece: Optional[str] = None,
+    data: _EcritureIn,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Créer une nouvelle écriture comptable."""
     e = Ecriture(
         entreprise_id=current_user.entreprise_id,
-        date_ecriture=date_ecriture,
-        numero_piece=numero_piece,
-        compte_debit=compte_debit,
-        compte_credit=compte_credit,
-        libelle=libelle,
-        montant=montant,
+        date_ecriture=data.date_ecriture,
+        numero_piece=data.numero_piece,
+        compte_debit=data.compte_debit,
+        compte_credit=data.compte_credit,
+        libelle=data.libelle,
+        montant=data.montant,
         created_by=current_user.id,
     )
     db.add(e)
@@ -79,20 +84,23 @@ def list_comptes(
     ).order_by(CompteComptable.numero).all()
 
 
+class _CompteIn(_BM):
+    numero: str
+    libelle: str
+    classe: int
+
 @router.post("/comptes")
 def create_compte(
-    numero: str = Query(...),
-    libelle: str = Query(...),
-    classe: int = Query(...),
+    data: _CompteIn,
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Créer un nouveau compte comptable."""
     c = CompteComptable(
         entreprise_id=current_user.entreprise_id,
-        numero=numero,
-        libelle=libelle,
-        classe=classe,
+        numero=data.numero,
+        libelle=data.libelle,
+        classe=data.classe,
     )
     db.add(c)
     db.commit()

@@ -2269,23 +2269,23 @@ function exportPage(id) {
 
 // ── Ajouter écriture ──
 async function ajouterEcriture() {
-  const d = prompt('Date (AAAA-MM-JJ):') || '';
+  const d = prompt('Date (AAAA-MM-JJ):','2026-04-03') || '';
   const debit = prompt('Compte débit (ex: 411000):') || '';
   const credit = prompt('Compte crédit (ex: 706000):') || '';
   const libelle = prompt('Libellé:') || '';
-  const montant = parseFloat(prompt('Montant:') || '0');
+  const montant = parseFloat(prompt('Montant (€):') || '0');
   if (!d || !debit || !credit || !libelle || !montant) { showToast('Tous les champs sont requis','error'); return; }
-  const data = await api.post('/api/compta/ecritures?date_ecriture='+d+'&compte_debit='+debit+'&compte_credit='+credit+'&libelle='+encodeURIComponent(libelle)+'&montant='+montant);
+  const data = await api.post('/api/compta/ecritures', {date_ecriture:d, compte_debit:debit, compte_credit:credit, libelle, montant});
   if (data) { showToast('Écriture créée ✓','success'); loadJournal(); }
 }
 
 // ── Ajouter compte ──
 async function ajouterCompte() {
   const numero = prompt('Numéro de compte (ex: 601000):') || '';
-  const libelle = prompt('Libellé:') || '';
+  const libelle = prompt('Libellé du compte:') || '';
   const classe = parseInt(numero[0] || '0');
   if (!numero || !libelle) { showToast('Numéro et libellé requis','error'); return; }
-  const data = await api.post('/api/compta/comptes?numero='+numero+'&libelle='+encodeURIComponent(libelle)+'&classe='+classe);
+  const data = await api.post('/api/compta/comptes', {numero, libelle, classe});
   if (data) { showToast('Compte '+numero+' créé ✓','success'); loadPlanComptes(); }
 }
 
