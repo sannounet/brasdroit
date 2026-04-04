@@ -1618,6 +1618,12 @@ function buildPrev(){
 // INIT
 calcPaie();
 buildPrev();
+
+// Placeholder — sera remplacé par les vraies fonctions dans le second script
+if (typeof ajouterEcriture === 'undefined') {
+  window.ajouterEcriture = function(){ alert('Chargement...'); };
+  window.ajouterCompte = function(){ alert('Chargement...'); };
+}
 </script>
 
 <script>
@@ -2268,7 +2274,7 @@ function exportPage(id) {
 }
 
 // ── Ajouter écriture ──
-async function ajouterEcriture() {
+window.ajouterEcriture = async function() {
   const d = prompt('Date (AAAA-MM-JJ):','2026-04-03') || '';
   const debit = prompt('Compte débit (ex: 411000):') || '';
   const credit = prompt('Compte crédit (ex: 706000):') || '';
@@ -2280,7 +2286,7 @@ async function ajouterEcriture() {
 }
 
 // ── Ajouter compte ──
-async function ajouterCompte() {
+window.ajouterCompte = async function() {
   const numero = prompt('Numéro de compte (ex: 601000):') || '';
   const libelle = prompt('Libellé du compte:') || '';
   const classe = parseInt(numero[0] || '0');
