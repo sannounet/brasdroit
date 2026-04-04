@@ -302,7 +302,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- DASHBOARD -->
 <div id="p-dashboard" class="panel active">
 <div class="topbar"><div class="tb-l"><div class="pt">Tableau de bord</div><div class="ps">Avril 2026 &middot; Donnees en temps reel</div></div>
-<div class="tb-r"><select class="sel" id="dash-periode" onchange="loadDashboard()"><option value="mois">Ce mois</option><option value="semaine">Cette semaine</option><option value="trimestre">Ce trimestre</option></select><button class="btn btn-p" onclick="exportDashboard()">&#8681; Exporter</button><button class="btn" onclick="logout()" style="margin-left:6px">&#8594; Deconnexion</button></div></div>
+<div class="tb-r"><select class="sel" id="dash-periode" onchange="loadDashboard()"><option value="mois">Ce mois</option><option value="semaine">Cette semaine</option><option value="trimestre">Ce trimestre</option></select><button class="btn btn-p" onclick="openModal('m-export')">&#8681; Exporter</button><button class="btn" onclick="logout()" style="margin-left:6px">&#8594; Deconnexion</button></div></div>
 <div class="content">
 <div class="fd"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">8 alertes urgentes &mdash; action requise aujourd'hui</div><div class="fdesc">TVA CA3 (05/04 &middot; 7 880&euro;) &middot; URSSAF (31/03 &middot; 3 240&euro;) &middot; DSN (05/04) &middot; Fournisseur Legrand (J-2) &middot; Impaye Andorno (17 040&euro;)</div><div class="fa"><button class="btn btn-sm btn-d" onclick="go('alertes')">Voir alertes</button><button class="btn btn-sm" onclick="go('decl-tva')">Preparer TVA</button></div></div></div>
 <div class="mg mg4">
@@ -1339,6 +1339,25 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- MODALS -->
+<div class="mo" id="m-export">
+<div class="modal" style="width:420px">
+<div class="mh">Exporter le rapport<span class="mc2" onclick="closeModal('m-export')">&times;</span></div>
+<div style="font-size:12.5px;color:var(--t2);margin-bottom:1rem">Choisissez le type de rapport à générer. L'IA Claude analysera vos données financières et produira un rapport professionnel.</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div onclick="genererRapport('reduit')" style="cursor:pointer;padding:1rem;border:2px solid var(--s4);border-radius:var(--rad2);transition:all .15s" onmouseover="this.style.borderColor='var(--b)'" onmouseout="this.style.borderColor='var(--s4)'">
+<div style="display:flex;align-items:center;gap:10px"><div style="font-size:20px">📋</div><div><div style="font-size:13.5px;font-weight:700">Rapport réduit</div><div style="font-size:11.5px;color:var(--t2)">Synthèse exécutive · KPIs · Actions prioritaires</div><div style="font-size:11px;color:var(--t3);margin-top:2px">~30 secondes · 1 page</div></div></div>
+</div>
+<div onclick="genererRapport('complet')" style="cursor:pointer;padding:1rem;border:2px solid var(--s4);border-radius:var(--rad2);transition:all .15s" onmouseover="this.style.borderColor='var(--b)'" onmouseout="this.style.borderColor='var(--s4)'">
+<div style="display:flex;align-items:center;gap:10px"><div style="font-size:20px">📊</div><div><div style="font-size:13.5px;font-weight:700">Rapport complet</div><div style="font-size:11.5px;color:var(--t2)">Analyse CA · Trésorerie · Créances · RH · Fiscal · Recommandations</div><div style="font-size:11px;color:var(--t3);margin-top:2px">~60 secondes · 3-5 pages</div></div></div>
+</div>
+</div>
+<div id="export-loading" style="display:none;text-align:center;padding:1.5rem">
+<div style="font-size:24px;margin-bottom:8px;animation:spin 1s linear infinite">⏳</div>
+<div style="font-size:13px;color:var(--t2)" id="export-status">Claude analyse vos données...</div>
+</div>
+<style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
+</div></div>
+
 <div class="mo" id="m-bdc">
 <div class="modal"><div class="mh">Nouveau bon de commande<span class="mc2" onclick="closeModal('m-bdc')">&times;</span></div>
 <div class="mrow"><div class="mlbl">Client</div><input type="text" placeholder="Nom du client"></div>
@@ -1766,54 +1785,82 @@ async function loadDashboard() {
   window._dashStats = stats;
 }
 
-function exportDashboard() {
-  const s = window._dashStats;
-  if (!s) { showToast('Chargez d\'abord le dashboard','error'); return; }
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});
-  const pLabel = {mois:'Ce mois',semaine:'Cette semaine',trimestre:'Ce trimestre'}[s.periode]||'Ce mois';
-  const report = `
-<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Bras Droit — Rapport ${dateStr}</title>
+async function genererRapport(type) {
+  const choices = document.querySelector('#m-export .modal > div:nth-child(3)');
+  const loading = document.getElementById('export-loading');
+  const status = document.getElementById('export-status');
+  if (choices) choices.style.display = 'none';
+  if (loading) loading.style.display = 'block';
+  if (status) status.textContent = type === 'complet'
+    ? 'Claude analyse en profondeur vos données financières...'
+    : 'Claude prépare votre synthèse...';
+
+  const data = await api.post('/api/dashboard/rapport?type_rapport=' + type);
+
+  if (loading) loading.style.display = 'none';
+  if (choices) choices.style.display = 'flex';
+  closeModal('m-export');
+
+  if (!data || !data.rapport_html) {
+    showToast('Erreur lors de la génération du rapport', 'error');
+    return;
+  }
+
+  const d = data.donnees;
+  const dateStr = new Date().toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+  const typeLabel = type === 'complet' ? 'Rapport complet' : 'Synthèse exécutive';
+
+  const report = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<title>Bras Droit — ${typeLabel}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:3rem;color:#1E293B;font-size:14px;line-height:1.6}
-  h1{font-size:24px;margin-bottom:4px} h2{font-size:16px;color:#475569;margin:2rem 0 .75rem;border-bottom:2px solid #E2E8F0;padding-bottom:6px}
-  .meta{font-size:12px;color:#94A3B8;margin-bottom:2rem}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
-  .kpi{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:1.25rem}
-  .kpi-label{font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-  .kpi-value{font-size:28px;font-weight:800}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1E293B;font-size:14px;line-height:1.7}
+  .page{max-width:800px;margin:0 auto;padding:3rem}
+  .header{border-bottom:3px solid #2563EB;padding-bottom:1.5rem;margin-bottom:2rem}
+  .header h1{font-size:26px;color:#1E293B;margin-bottom:2px}
+  .header .sub{font-size:14px;color:#2563EB;font-weight:600}
+  .header .meta{font-size:11px;color:#94A3B8;margin-top:8px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:1.5rem 0}
+  .kpi{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:1rem;text-align:center}
+  .kpi-label{font-size:10px;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em}
+  .kpi-value{font-size:22px;font-weight:800;margin-top:4px}
   .blue{color:#2563EB} .green{color:#16A34A} .red{color:#DC2626} .orange{color:#D97706}
-  table{width:100%;border-collapse:collapse;margin-top:.5rem} th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #E2E8F0;font-size:13px}
+  h1{font-size:22px;margin:2rem 0 .5rem} h2{font-size:17px;color:#1E293B;margin:1.75rem 0 .75rem;border-bottom:2px solid #E2E8F0;padding-bottom:6px}
+  h3{font-size:14px;color:#475569;margin:1rem 0 .5rem}
+  p{margin-bottom:.75rem;color:#334155}
+  table{width:100%;border-collapse:collapse;margin:.75rem 0} th,td{padding:8px 12px;text-align:left;border-bottom:1px solid #E2E8F0;font-size:13px}
   th{background:#F8FAFC;font-weight:700;font-size:11px;text-transform:uppercase;color:#475569}
-  .r{text-align:right} .footer{margin-top:3rem;padding-top:1rem;border-top:1px solid #E2E8F0;font-size:11px;color:#94A3B8;text-align:center}
-  @media print{body{padding:1.5rem}}
+  ul{margin:.5rem 0 1rem 1.5rem} li{margin-bottom:4px;color:#334155}
+  strong{color:#1E293B}
+  .footer{margin-top:3rem;padding-top:1rem;border-top:2px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center;line-height:1.8}
+  @media print{.page{padding:1.5rem} .no-print{display:none}}
+  .print-btn{position:fixed;top:20px;right:20px;background:#2563EB;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;z-index:100}
+  .print-btn:hover{background:#1D4ED8}
 </style></head><body>
-<h1>Bras Droit — Rapport de gestion</h1>
-<div class="meta">${dateStr} · Période : ${pLabel} (depuis ${s.debut}) · Score santé : ${s.score_sante}/100</div>
+<button class="print-btn no-print" onclick="window.print()">📄 Imprimer / PDF</button>
+<div class="page">
+  <div class="header">
+    <h1>${d.entreprise || 'Bras Droit'}</h1>
+    <div class="sub">${typeLabel} — ${dateStr}</div>
+    <div class="meta">${d.siret ? 'SIRET ' + d.siret + ' · ' : ''}Généré par Bras Droit IA</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">CA ce mois</div><div class="kpi-value blue">${fmtEur(d.ca_mois)}</div></div>
+    <div class="kpi"><div class="kpi-label">Trésorerie</div><div class="kpi-value green">${fmtEur(d.tresorerie)}</div></div>
+    <div class="kpi"><div class="kpi-label">Impayés</div><div class="kpi-value red">${fmtEur(d.impayes)}</div></div>
+    <div class="kpi"><div class="kpi-label">Taux recouvrement</div><div class="kpi-value ${d.taux_recouvrement>80?'green':'orange'}">${d.taux_recouvrement}%</div></div>
+  </div>
+  ${data.rapport_html}
+  <div class="footer">
+    Rapport généré par <strong>Bras Droit</strong> avec l'assistance de Claude IA · ${dateStr}<br>
+    ${d.entreprise} ${d.siret ? '· SIRET ' + d.siret : ''} · Document confidentiel
+  </div>
+</div></body></html>`;
 
-<h2>Indicateurs clés</h2>
-<div class="grid">
-  <div class="kpi"><div class="kpi-label">Chiffre d'affaires (${pLabel.toLowerCase()})</div><div class="kpi-value blue">${fmtEur(s.ca_mois)}</div></div>
-  <div class="kpi"><div class="kpi-label">Trésorerie bancaire</div><div class="kpi-value green">${fmtEur(s.tresorerie)}</div></div>
-  <div class="kpi"><div class="kpi-label">Impayés en cours</div><div class="kpi-value red">${fmtEur(s.impayes)}</div><div style="font-size:12px;color:#94A3B8;margin-top:2px">${s.nb_factures_en_retard} facture(s) en retard</div></div>
-  <div class="kpi"><div class="kpi-label">Obligations à payer</div><div class="kpi-value orange">${fmtEur(s.obligations_mois)}</div><div style="font-size:12px;color:#94A3B8;margin-top:2px">${s.nb_alertes_urgentes} alerte(s) urgente(s)</div></div>
-</div>
-
-<h2>Synthèse</h2>
-<table>
-  <tr><td>Score de santé financière</td><td class="r" style="font-weight:700">${s.score_sante}/100</td></tr>
-  <tr><td>Factures en retard</td><td class="r">${s.nb_factures_en_retard}</td></tr>
-  <tr><td>Alertes urgentes</td><td class="r">${s.nb_alertes_urgentes}</td></tr>
-  <tr><td>Période analysée</td><td class="r">Depuis le ${s.debut}</td></tr>
-</table>
-
-<div class="footer">Rapport généré automatiquement par Bras Droit · ${dateStr} · Confidentiel</div>
-</body></html>`;
-  const blob = new Blob([report], {type:'text/html'});
+  const blob = new Blob([report], {type: 'text/html;charset=utf-8'});
   const url = URL.createObjectURL(blob);
-  const w = window.open(url,'_blank','width=900,height=700');
-  setTimeout(()=>{w.print();},500);
+  window.open(url, '_blank');
+  showToast(typeLabel + ' généré ✓', 'success');
 }
 
 async function loadAlertes() {
