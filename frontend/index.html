@@ -1627,11 +1627,6 @@ function buildPrev(){
 calcPaie();
 buildPrev();
 
-// Placeholder — sera remplacé par les vraies fonctions dans le second script
-if (typeof ajouterEcriture === 'undefined') {
-  window.ajouterEcriture = function(){ alert('Chargement...'); };
-  window.ajouterCompte = function(){ alert('Chargement...'); };
-}
 </script>
 
 <script>
@@ -2170,7 +2165,7 @@ window._goLoaders = {
     'liasse': loadLiasse,
     'ecarts': loadEcarts,
     'optim': loadOptimisation,
-    'profil': loadProfil,
+    'profil': function(){ if(window.loadProfil) window.loadProfil(); },
   };
 
 document.addEventListener('DOMContentLoaded', function() {
