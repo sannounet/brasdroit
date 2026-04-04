@@ -360,7 +360,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- ALERTES -->
 <div id="p-alertes" class="panel">
 <div class="topbar"><div class="tb-l"><div class="pt">Alertes de gestion</div><div class="ps">8 urgentes &middot; 12 importantes</div></div>
-<div class="tb-r"><select class="sel"><option>Toutes</option><option>Fiscales</option><option>Sociales</option><option>Fournisseurs</option><option>RH</option></select></div></div>
+<div class="tb-r"><select class="sel" id="alertes-filtre" onchange="loadAlertes()"><option value="">Toutes</option><option value="fiscal">Fiscales</option><option value="social">Sociales</option><option value="impaye">Impayés</option></select></div></div>
 <div class="content">
 <div class="g3">
 <div style="text-align:center;padding:.875rem;background:var(--rb);border-radius:var(--rad2);border:1px solid #FEB2B2"><div style="font-size:28px;font-weight:800;color:var(--r)">8</div><div style="font-size:11.5px;color:var(--rt);font-weight:600">URGENTES</div><div style="font-size:11px;color:var(--t2)">A traiter aujourd'hui</div></div>
@@ -1865,17 +1865,43 @@ async function genererRapport(type) {
 
 async function loadAlertes() {
   const data = await api.get('/api/dashboard/alertes');
-  if (!data) return;
-  const container = document.getElementById('alertes-list');
-  if (!container) return;
-  container.innerHTML = data.alertes.map(a => `
-    <div class="dli ${a.severite === 'urgent' ? 'dl-urg' : 'dl-soon'}">
-      <div class="dld" style="color:${a.severite === 'urgent' ? 'var(--rt)' : 'var(--at)'}">${a.severite === 'urgent' ? 'URGENT' : 'J-15'}</div>
-      <div style="flex:1"><div class="dli-n">${a.titre}</div>
-      <div class="dli-s">${a.montant ? fmtEur(a.montant) : ''}</div></div>
-      ${a.action ? `<button class="btn btn-sm btn-d" onclick="apiRelancer(${a.action.split('/')[4]})">Traiter →</button>` : ''}
+  const c = document.querySelector('#p-alertes .content');
+  if (!c || !data) return;
+
+  const filtre = (document.getElementById('alertes-filtre')||{}).value || '';
+  const typeMap = {
+    'fiscal': ['TVA','IS','RAS'],
+    'social': ['URSSAF','DSN'],
+    'impaye': ['IMPAYE'],
+  };
+
+  let alertes = data.alertes || [];
+  if (filtre && typeMap[filtre]) {
+    alertes = alertes.filter(a => typeMap[filtre].includes(a.type));
+  }
+
+  const urgentes = alertes.filter(a => a.severite === 'urgent');
+  const importantes = alertes.filter(a => a.severite !== 'urgent');
+
+  const makeItem = (a) => {
+    const cls = a.severite === 'urgent' ? 'dl-urg' : 'dl-soon';
+    const col = a.severite === 'urgent' ? 'var(--rt)' : 'var(--at)';
+    const jLabel = a.titre.match(/J[+-]\d+/)?.[0] || (a.severite === 'urgent' ? '!' : '—');
+    const navMap = {'TVA':'decl-tva','IS':'decl-is','URSSAF':'decl-urssaf','DSN':'dsn','RAS':'ras','IMPAYE':'recovery'};
+    const nav = navMap[a.type] || '';
+    const btn = nav ? `<button class="btn btn-sm ${a.severite==='urgent'?'btn-d':'btn-w'}" onclick="go('${nav}')">Traiter →</button>` : '';
+    return `<div class="dli ${cls}" style="margin-bottom:8px"><div class="dld" style="color:${col}">${jLabel}</div><div style="flex:1"><div class="dli-n">${a.titre}</div><div class="dli-s">${a.montant ? fmtEur(a.montant) : ''} ${a.echeance ? '· Échéance ' + a.echeance : ''}</div></div>${btn}</div>`;
+  };
+
+  c.innerHTML = `
+    <div class="g3">
+      <div style="text-align:center;padding:.875rem;background:var(--rb);border-radius:var(--rad2);border:1px solid #FEB2B2"><div style="font-size:28px;font-weight:800;color:var(--r)">${urgentes.length}</div><div style="font-size:11.5px;color:var(--rt);font-weight:600">URGENTES</div><div style="font-size:11px;color:var(--t2)">À traiter immédiatement</div></div>
+      <div style="text-align:center;padding:.875rem;background:var(--ab);border-radius:var(--rad2);border:1px solid #FFD43B"><div style="font-size:28px;font-weight:800;color:var(--a)">${importantes.length}</div><div style="font-size:11.5px;color:var(--at);font-weight:600">IMPORTANTES</div><div style="font-size:11px;color:var(--t2)">Dans les 30 jours</div></div>
+      <div style="text-align:center;padding:.875rem;background:var(--gb);border-radius:var(--rad2);border:1px solid #B2F2BB"><div style="font-size:28px;font-weight:800;color:var(--g)">${alertes.length}</div><div style="font-size:11.5px;color:var(--gt);font-weight:600">TOTAL</div><div style="font-size:11px;color:var(--t2)">${filtre ? 'Filtre : '+filtre : 'Toutes catégories'}</div></div>
     </div>
-  `).join('');
+    ${urgentes.length ? `<div class="card"><div class="ct" style="margin-bottom:.75rem">🔴 Alertes urgentes</div>${urgentes.map(makeItem).join('')}</div>` : ''}
+    ${importantes.length ? `<div class="card"><div class="ct" style="margin-bottom:.75rem">🟠 Alertes importantes</div>${importantes.map(makeItem).join('')}</div>` : ''}
+    ${alertes.length === 0 ? '<div class="card" style="text-align:center;padding:2rem"><div style="font-size:28px;margin-bottom:8px">✓</div><div style="font-size:14px;font-weight:600;color:var(--g)">Aucune alerte' + (filtre ? ' pour ce filtre' : '') + '</div></div>' : ''}`;
 }
 
 // ── Factures ──
