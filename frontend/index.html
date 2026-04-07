@@ -2685,23 +2685,114 @@ async function loadRAS() {
 
 // ── Budget ──
 async function loadBudget() {
-  const annee = new Date().getFullYear();
+  const annee = window._exercice || new Date().getFullYear();
   const data = await api.get('/api/declarations/budget?annee='+annee);
   const c = document.querySelector('#p-budget .content');
   if (!c||!data) return;
-  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const items = data.mois||(Array.isArray(data)?data:[]);
+  window._budgetItems = items;
   const rows = items.map(m => {
     const ca=m.ca||m.revenus||0,dep=m.depenses||m.charges||0,ecart=ca-dep;
-    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td><td class="tr pos">${fmtEur(ca)}</td><td class="tr neg">${fmtEur(dep)}</td><td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td></tr>`;
-  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+    return `<tr style="cursor:pointer" onclick="showBudgetMois(${m.mois})"><td><strong>${moisNoms[m.mois]||m.mois}</strong> ${annee}</td><td class="tr pos">${fmtEur(ca)}</td><td class="tr neg">${fmtEur(dep)}</td><td class="tr ${ecart>=0?'pos':'neg'}">${fmtEur(ecart)}</td><td style="color:var(--b);font-size:11px">→ Détails</td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
   const tCA=items.reduce((s,m)=>s+(m.ca||m.revenus||0),0),tD=items.reduce((s,m)=>s+(m.depenses||m.charges||0),0);
-  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">CA YTD</div><div class="mv pos">${fmtEur(tCA)}</div></div>
+  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">CA YTD ${annee}</div><div class="mv pos">${fmtEur(tCA)}</div></div>
     <div class="mc"><div class="ml">Dépenses YTD</div><div class="mv neg">${fmtEur(tD)}</div></div>
     <div class="mc"><div class="ml">Résultat YTD</div><div class="mv" style="color:${tCA-tD>=0?'var(--g)':'var(--r)'}">${fmtEur(tCA-tD)}</div></div></div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">Budget mensuel ${annee}</div>
-    <table><thead><tr><th>Mois</th><th class="tr">CA</th><th class="tr">Dépenses</th><th class="tr">Résultat</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="card"><div class="ct" style="margin-bottom:.75rem">Budget mensuel ${annee} <span style="font-size:11px;color:var(--t3);font-weight:400">— Cliquez sur un mois pour voir les détails</span></div>
+    <table><thead><tr><th>Mois</th><th class="tr">CA</th><th class="tr">Dépenses</th><th class="tr">Résultat</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div id="budget-detail"></div>`;
 }
+
+window.showBudgetMois = async function(mois) {
+  const annee = window._exercice || new Date().getFullYear();
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const detail = document.getElementById('budget-detail');
+  if (!detail) return;
+  detail.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--t3)">Chargement des détails...</div>';
+
+  // Récupérer les données du mois : factures + mouvements
+  const releves = await api.get('/api/tresorerie/releves?annee='+annee+'&mois='+mois);
+  const factures = await api.get('/api/facturation/factures');
+
+  const facturesMois = (factures||[]).filter(f => {
+    if (!f.date_facture) return false;
+    const d = new Date(f.date_facture);
+    return d.getFullYear()===annee && (d.getMonth()+1)===mois;
+  });
+
+  const mvts = (releves && releves.mouvements) || [];
+  const enc = mvts.filter(m => m.montant > 0);
+  const dec = mvts.filter(m => m.montant < 0);
+  const totalEnc = enc.reduce((s,m) => s+m.montant, 0);
+  const totalDec = Math.abs(dec.reduce((s,m) => s+m.montant, 0));
+
+  const itemBudget = (window._budgetItems||[]).find(i => i.mois === mois) || {};
+  const caBudget = itemBudget.ca || itemBudget.revenus || 0;
+  const depBudget = itemBudget.depenses || itemBudget.charges || 0;
+
+  // Catégoriser les dépenses
+  const catDep = {};
+  dec.forEach(m => {
+    const cat = m.categorie || 'Autre';
+    catDep[cat] = (catDep[cat] || 0) + Math.abs(m.montant);
+  });
+  const catRows = Object.entries(catDep).sort((a,b) => b[1]-a[1]).map(([cat,total]) => {
+    const pct = depBudget > 0 ? Math.round((total/depBudget)*100) : 0;
+    return `<tr><td>${cat}</td><td class="tr neg">${fmtEur(total)}</td><td class="tr">${pct}%</td></tr>`;
+  }).join('');
+
+  const facturesRows = facturesMois.map(f => {
+    const cls = {reglee:'tg',en_retard:'tr2',judiciaire:'tp',emise:'tw2',en_attente:'tw2'}[f.statut]||'tgy';
+    return `<tr><td><strong>${f.numero}</strong></td><td>${f.objet||''}</td><td class="tr">${fmtEur(f.montant_ht)}</td><td class="tr pos">${fmtEur(f.montant_ttc)}</td><td><span class="tag ${cls}">${f.statut}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucune facture ce mois</td></tr>';
+
+  const encaissementsRows = enc.map(m =>
+    `<tr><td>${m.date_operation}</td><td>${m.libelle.substring(0,40)}</td><td><span class="tag tgy">${m.categorie||''}</span></td><td class="tr pos">${fmtEur(m.montant)}</td></tr>`
+  ).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun encaissement</td></tr>';
+
+  const decaissementsRows = dec.map(m =>
+    `<tr><td>${m.date_operation}</td><td>${m.libelle.substring(0,40)}</td><td><span class="tag tgy">${m.categorie||''}</span></td><td class="tr neg">${fmtEur(Math.abs(m.montant))}</td></tr>`
+  ).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun décaissement</td></tr>';
+
+  detail.innerHTML = `
+    <div class="card" style="border-left:3px solid var(--b);margin-top:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div class="ct" style="font-size:14px">📊 Détails ${moisNoms[mois]} ${annee}</div>
+        <button class="btn btn-sm" onclick="document.getElementById('budget-detail').innerHTML=''">Fermer ✕</button>
+      </div>
+      <div class="mg mg4">
+        <div class="mc"><div class="ml">CA réalisé</div><div class="mv pos">${fmtEur(caBudget)}</div></div>
+        <div class="mc"><div class="ml">Dépenses</div><div class="mv neg">${fmtEur(depBudget)}</div></div>
+        <div class="mc"><div class="ml">Résultat mois</div><div class="mv" style="color:${caBudget-depBudget>=0?'var(--g)':'var(--r)'}">${fmtEur(caBudget-depBudget)}</div></div>
+        <div class="mc"><div class="ml">Marge</div><div class="mv">${caBudget>0?Math.round((caBudget-depBudget)/caBudget*100):0}%</div></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">📄 Factures du mois (${facturesMois.length})</div>
+        <table><thead><tr><th>N°</th><th>Objet</th><th class="tr">HT</th><th class="tr">TTC</th><th>Statut</th></tr></thead><tbody>${facturesRows}</tbody></table>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">📊 Répartition des dépenses</div>
+        <table><thead><tr><th>Catégorie</th><th class="tr">Montant</th><th class="tr">% du total</th></tr></thead><tbody>${catRows||'<tr><td colspan="3" style="text-align:center;color:var(--t3)">Aucune dépense</td></tr>'}</tbody></table>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">💰 Encaissements (${enc.length}) — ${fmtEur(totalEnc)}</div>
+        <table><thead><tr><th>Date</th><th>Libellé</th><th>Cat.</th><th class="tr">Montant</th></tr></thead><tbody>${encaissementsRows}</tbody></table>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">💸 Décaissements (${dec.length}) — ${fmtEur(totalDec)}</div>
+        <table><thead><tr><th>Date</th><th>Libellé</th><th>Cat.</th><th class="tr">Montant</th></tr></thead><tbody>${decaissementsRows}</tbody></table>
+      </div>
+    </div>`;
+
+  // Scroll to detail
+  detail.scrollIntoView({behavior:'smooth', block:'start'});
+};
 
 // ── Journal de paie ──
 async function loadJournalPaie() {
