@@ -495,7 +495,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- JOURNAL -->
 <div id="p-journal" class="panel">
 <div class="topbar"><div class="tb-l"><div class="pt">Journal de saisie &mdash; Red Flags IA</div></div>
-<div class="tb-r"><span class="tag tr2">7 anomalies</span><button class="btn btn-p" style="margin-left:6px" onclick="ajouterEcriture()">+ Ecriture</button></div></div>
+<div class="tb-r"><span class="tag tr2">7 anomalies</span><button class="btn btn-p" style="margin-left:6px" onclick="openModalEcriture()">+ Ecriture</button></div></div>
 <div class="content">
 <div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Moteur IA actif &mdash; verification PCG, doublons, TVA, equilibre en temps reel</div></div></div>
 <div class="g3" style="margin-bottom:.875rem">
@@ -549,7 +549,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PLAN DE COMPTES -->
 <div id="p-plan" class="panel">
-<div class="topbar"><div class="pt">Plan de comptes &mdash; PCG 2026</div><div class="tb-r"><button class="btn" onclick="ajouterCompte()">+ Créer compte</button><button class="btn btn-p" onclick="exportPage('plan')">Export FEC</button></div></div>
+<div class="topbar"><div class="pt">Plan de comptes &mdash; PCG 2026</div><div class="tb-r"><button class="btn" onclick="openModal('m-compte')">+ Créer compte</button><button class="btn btn-p" onclick="exportPage('plan')">Export FEC</button></div></div>
 <div class="content">
 <div class="card">
 <table><thead><tr><th>Compte</th><th>Libelle</th><th>Classe</th><th class="tr">Debit</th><th class="tr">Credit</th><th>Actif</th></tr></thead>
@@ -1347,6 +1347,50 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- MODALS -->
+<div class="mo" id="m-ecriture">
+<div class="modal" style="width:480px">
+<div class="mh">Nouvelle écriture comptable<span class="mc2" onclick="closeModal('m-ecriture')">&times;</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Date</div><input type="date" id="ec-date" value="2026-04-03"></div>
+  <div class="mrow"><div class="mlbl">N° pièce (optionnel)</div><input type="text" id="ec-piece" placeholder="VE-2026-013"></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Compte débit</div><input type="text" id="ec-debit" placeholder="411000" list="dl-comptes"></div>
+  <div class="mrow"><div class="mlbl">Compte crédit</div><input type="text" id="ec-credit" placeholder="706000" list="dl-comptes"></div>
+</div>
+<datalist id="dl-comptes"></datalist>
+<div class="mrow"><div class="mlbl">Libellé</div><input type="text" id="ec-libelle" placeholder="Description de l'opération..."></div>
+<div class="mrow"><div class="mlbl">Montant (€)</div><input type="number" id="ec-montant" step="0.01" placeholder="0.00"></div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitEcriture()">Enregistrer l'écriture</button>
+  <button class="btn" onclick="closeModal('m-ecriture')">Annuler</button>
+</div>
+</div></div>
+
+<div class="mo" id="m-compte">
+<div class="modal" style="width:420px">
+<div class="mh">Nouveau compte comptable<span class="mc2" onclick="closeModal('m-compte')">&times;</span></div>
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Numéro</div><input type="text" id="cpt-numero" placeholder="601000" maxlength="10" oninput="var v=this.value;var s=document.getElementById('cpt-classe');if(s&&v[0]>='1'&&v[0]<='7')s.value=v[0]"></div>
+  <div class="mrow"><div class="mlbl">Libellé</div><input type="text" id="cpt-libelle" placeholder="Achats matières premières"></div>
+</div>
+<div class="mrow"><div class="mlbl">Classe</div>
+  <select id="cpt-classe">
+    <option value="1">1 — Capitaux</option>
+    <option value="2">2 — Immobilisations</option>
+    <option value="3">3 — Stocks</option>
+    <option value="4">4 — Tiers</option>
+    <option value="5">5 — Financier</option>
+    <option value="6" selected>6 — Charges</option>
+    <option value="7">7 — Produits</option>
+  </select>
+</div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitCompte()">Créer le compte</button>
+  <button class="btn" onclick="closeModal('m-compte')">Annuler</button>
+</div>
+</div></div>
+
 <div class="mo" id="m-export">
 <div class="modal" style="width:420px">
 <div class="mh">Exporter le rapport<span class="mc2" onclick="closeModal('m-export')">&times;</span></div>
@@ -2276,27 +2320,52 @@ function exportPage(id) {
   setTimeout(()=>w.print(), 300);
 }
 
-// ── Ajouter écriture ──
-window.ajouterEcriture = async function() {
-  const d = prompt('Date (AAAA-MM-JJ):','2026-04-03') || '';
-  const debit = prompt('Compte débit (ex: 411000):') || '';
-  const credit = prompt('Compte crédit (ex: 706000):') || '';
-  const libelle = prompt('Libellé:') || '';
-  const montant = parseFloat(prompt('Montant (€):') || '0');
-  if (!d || !debit || !credit || !libelle || !montant) { showToast('Tous les champs sont requis','error'); return; }
-  const data = await api.post('/api/compta/ecritures', {date_ecriture:d, compte_debit:debit, compte_credit:credit, libelle, montant});
-  if (data) { showToast('Écriture créée ✓','success'); loadJournal(); }
-}
+// ── Modal écriture ──
+window.openModalEcriture = async function() {
+  // Pré-remplir la datalist avec les comptes existants
+  const comptes = await api.get('/api/compta/comptes');
+  const dl = document.getElementById('dl-comptes');
+  if (dl && comptes) {
+    dl.innerHTML = comptes.map(c => `<option value="${c.numero}">${c.numero} — ${c.libelle}</option>`).join('');
+  }
+  const dateInput = document.getElementById('ec-date');
+  if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+  openModal('m-ecriture');
+};
 
-// ── Ajouter compte ──
-window.ajouterCompte = async function() {
-  const numero = prompt('Numéro de compte (ex: 601000):') || '';
-  const libelle = prompt('Libellé du compte:') || '';
-  const classe = parseInt(numero[0] || '0');
+window.submitEcriture = async function() {
+  const d = document.getElementById('ec-date')?.value || '';
+  const piece = document.getElementById('ec-piece')?.value || null;
+  const debit = document.getElementById('ec-debit')?.value || '';
+  const credit = document.getElementById('ec-credit')?.value || '';
+  const libelle = document.getElementById('ec-libelle')?.value || '';
+  const montant = parseFloat(document.getElementById('ec-montant')?.value || '0');
+  if (!d || !debit || !credit || !libelle || !montant) { showToast('Tous les champs sont requis','error'); return; }
+  const data = await api.post('/api/compta/ecritures', {date_ecriture:d, numero_piece:piece, compte_debit:debit, compte_credit:credit, libelle, montant});
+  if (data) {
+    showToast('Écriture enregistrée ✓','success');
+    closeModal('m-ecriture');
+    // Vider les champs
+    ['ec-piece','ec-debit','ec-credit','ec-libelle','ec-montant'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    loadJournal();
+  }
+};
+
+// ── Modal compte ──
+window.submitCompte = async function() {
+  const numero = document.getElementById('cpt-numero')?.value || '';
+  const libelle = document.getElementById('cpt-libelle')?.value || '';
+  const classe = parseInt(document.getElementById('cpt-classe')?.value || '6');
   if (!numero || !libelle) { showToast('Numéro et libellé requis','error'); return; }
   const data = await api.post('/api/compta/comptes', {numero, libelle, classe});
-  if (data) { showToast('Compte '+numero+' créé ✓','success'); loadPlanComptes(); }
-}
+  if (data) {
+    showToast('Compte '+numero+' créé ✓','success');
+    closeModal('m-compte');
+    document.getElementById('cpt-numero').value = '';
+    document.getElementById('cpt-libelle').value = '';
+    loadPlanComptes();
+  }
+};
 
 // ── Journal comptable ──
 async function loadJournal() {
