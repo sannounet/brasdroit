@@ -194,7 +194,7 @@ def resultat(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Compte de resultat simplifie : charges (classe 6) et produits (classe 7)."""
+    """Compte de résultat détaillé décomposé par sous-catégorie PCG."""
     eid = current_user.entreprise_id
 
     ecritures = db.query(Ecriture).filter(
@@ -205,32 +205,169 @@ def resultat(
     comptes = db.query(CompteComptable).filter(
         CompteComptable.entreprise_id == eid
     ).all()
-    compte_classe = {c.numero: c.classe for c in comptes}
+    compte_libelle = {c.numero: c.libelle for c in comptes}
 
-    charges = 0.0
-    produits = 0.0
+    # Grouper par compte
+    charges_par_compte = {}
+    produits_par_compte = {}
 
     for e in ecritures:
         montant = float(e.montant or 0)
+        cd = e.compte_debit
+        cc = e.compte_credit
 
-        classe_d = compte_classe.get(e.compte_debit) or _classe_from_numero(e.compte_debit)
-        classe_c = compte_classe.get(e.compte_credit) or _classe_from_numero(e.compte_credit)
+        # Charges = debits classe 6
+        if cd and cd[0] == "6":
+            if cd not in charges_par_compte:
+                charges_par_compte[cd] = {"numero": cd, "libelle": compte_libelle.get(cd, _libelle_compte_resultat(cd)), "montant": 0}
+            charges_par_compte[cd]["montant"] += montant
 
-        # Charges = debits en classe 6
-        if classe_d == 6:
-            charges += montant
-        # Produits = credits en classe 7
-        if classe_c == 7:
-            produits += montant
+        # Produits = credits classe 7
+        if cc and cc[0] == "7":
+            if cc not in produits_par_compte:
+                produits_par_compte[cc] = {"numero": cc, "libelle": compte_libelle.get(cc, _libelle_compte_resultat(cc)), "montant": 0}
+            produits_par_compte[cc]["montant"] += montant
 
-    resultat_net = produits - charges
+    # Trier par numéro
+    charges_lignes = sorted(charges_par_compte.values(), key=lambda x: x["numero"])
+    produits_lignes = sorted(produits_par_compte.values(), key=lambda x: x["numero"])
+
+    # Décomposition par sous-catégorie (basée sur les 2 premiers chiffres)
+    def categoriser_charges(numero):
+        prefix = numero[:2] if len(numero) >= 2 else numero
+        cats = {
+            "60": "Achats",
+            "61": "Services extérieurs",
+            "62": "Autres services extérieurs",
+            "63": "Impôts et taxes",
+            "64": "Charges de personnel",
+            "65": "Autres charges de gestion",
+            "66": "Charges financières",
+            "67": "Charges exceptionnelles",
+            "68": "Dotations aux amortissements",
+            "69": "Impôts sur les bénéfices",
+        }
+        return cats.get(prefix, "Autres charges")
+
+    def categoriser_produits(numero):
+        prefix = numero[:2] if len(numero) >= 2 else numero
+        cats = {
+            "70": "Ventes de produits et services",
+            "71": "Production stockée",
+            "72": "Production immobilisée",
+            "73": "Subventions",
+            "74": "Subventions d'exploitation",
+            "75": "Autres produits",
+            "76": "Produits financiers",
+            "77": "Produits exceptionnels",
+            "78": "Reprises sur amortissements",
+            "79": "Transferts de charges",
+        }
+        return cats.get(prefix, "Autres produits")
+
+    # Sous-totaux par catégorie
+    charges_par_cat = {}
+    for l in charges_lignes:
+        cat = categoriser_charges(l["numero"])
+        if cat not in charges_par_cat:
+            charges_par_cat[cat] = {"categorie": cat, "montant": 0, "lignes": []}
+        charges_par_cat[cat]["montant"] += l["montant"]
+        charges_par_cat[cat]["lignes"].append(l)
+
+    produits_par_cat = {}
+    for l in produits_lignes:
+        cat = categoriser_produits(l["numero"])
+        if cat not in produits_par_cat:
+            produits_par_cat[cat] = {"categorie": cat, "montant": 0, "lignes": []}
+        produits_par_cat[cat]["montant"] += l["montant"]
+        produits_par_cat[cat]["lignes"].append(l)
+
+    # Sous-totaux pour le résultat structuré
+    charges_exploitation = sum(g["montant"] for c, g in charges_par_cat.items() if c in ("Achats","Services extérieurs","Autres services extérieurs","Impôts et taxes","Charges de personnel","Autres charges de gestion","Dotations aux amortissements"))
+    charges_financieres = charges_par_cat.get("Charges financières", {}).get("montant", 0)
+    charges_exceptionnelles = charges_par_cat.get("Charges exceptionnelles", {}).get("montant", 0)
+    impots_benefices = charges_par_cat.get("Impôts sur les bénéfices", {}).get("montant", 0)
+
+    produits_exploitation = sum(g["montant"] for c, g in produits_par_cat.items() if c in ("Ventes de produits et services","Production stockée","Production immobilisée","Subventions d'exploitation","Subventions","Autres produits","Reprises sur amortissements","Transferts de charges"))
+    produits_financiers_total = produits_par_cat.get("Produits financiers", {}).get("montant", 0)
+    produits_exceptionnels_total = produits_par_cat.get("Produits exceptionnels", {}).get("montant", 0)
+
+    resultat_exploitation = produits_exploitation - charges_exploitation
+    resultat_financier = produits_financiers_total - charges_financieres
+    resultat_exceptionnel = produits_exceptionnels_total - charges_exceptionnelles
+    resultat_courant = resultat_exploitation + resultat_financier
+    resultat_net = resultat_courant + resultat_exceptionnel - impots_benefices
+
+    total_charges = sum(l["montant"] for l in charges_lignes)
+    total_produits = sum(l["montant"] for l in produits_lignes)
 
     return {
         "annee": annee,
-        "charges": round(charges, 2),
-        "produits": round(produits, 2),
+        "charges": round(total_charges, 2),
+        "produits": round(total_produits, 2),
         "resultat_net": round(resultat_net, 2),
+        "charges_detail": charges_lignes,
+        "produits_detail": produits_lignes,
+        "charges_par_categorie": list(charges_par_cat.values()),
+        "produits_par_categorie": list(produits_par_cat.values()),
+        "soldes_intermediaires": {
+            "produits_exploitation": round(produits_exploitation, 2),
+            "charges_exploitation": round(charges_exploitation, 2),
+            "resultat_exploitation": round(resultat_exploitation, 2),
+            "produits_financiers": round(produits_financiers_total, 2),
+            "charges_financieres": round(charges_financieres, 2),
+            "resultat_financier": round(resultat_financier, 2),
+            "resultat_courant": round(resultat_courant, 2),
+            "produits_exceptionnels": round(produits_exceptionnels_total, 2),
+            "charges_exceptionnelles": round(charges_exceptionnelles, 2),
+            "resultat_exceptionnel": round(resultat_exceptionnel, 2),
+            "impots_benefices": round(impots_benefices, 2),
+            "resultat_net": round(resultat_net, 2),
+        },
     }
+
+
+def _libelle_compte_resultat(numero: str) -> str:
+    """Libellés par défaut pour les comptes 6 et 7."""
+    defaults = {
+        "601": "Achats matières premières",
+        "604": "Achats prestations de services",
+        "606": "Fournitures non stockables",
+        "607": "Achats marchandises",
+        "611": "Sous-traitance",
+        "613": "Locations",
+        "615": "Entretien et réparations",
+        "616": "Primes d'assurances",
+        "618": "Documentation",
+        "621": "Personnel extérieur",
+        "622": "Honoraires",
+        "623": "Publicité",
+        "625": "Déplacements et missions",
+        "626": "Frais postaux et télécom",
+        "627": "Services bancaires",
+        "631": "Impôts et taxes",
+        "641": "Salaires et traitements",
+        "645": "Cotisations sociales",
+        "651": "Redevances",
+        "661": "Charges d'intérêts",
+        "671": "Charges exceptionnelles",
+        "681": "Dotations amortissements",
+        "695": "Impôt sur les bénéfices",
+        "701": "Ventes de produits finis",
+        "704": "Travaux",
+        "706": "Prestations de services",
+        "707": "Ventes de marchandises",
+        "708": "Produits accessoires",
+        "740": "Subventions d'exploitation",
+        "751": "Redevances perçues",
+        "758": "Produits divers",
+        "761": "Produits financiers",
+        "771": "Produits exceptionnels",
+        "781": "Reprises sur amortissements",
+        "791": "Transferts de charges",
+    }
+    prefix = numero[:3] if len(numero) >= 3 else numero
+    return defaults.get(prefix, f"Compte {numero}")
 
 
 # ─── RATIOS ───

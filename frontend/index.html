@@ -2846,21 +2846,113 @@ async function loadBilan() {
 
 // ── Compte de résultat ──
 async function loadResultat() {
-  const annee = (window._exercice||new Date().getFullYear());
+  const annee = window._exercice || new Date().getFullYear();
   const data = await api.get('/api/compta/resultat?annee='+annee);
   const c = document.querySelector('#p-resultat .content');
   if (!c||!data) return;
-  const rn = data.resultat_net||((data.produits||0)-(data.charges||0));
+
+  const sig = data.soldes_intermediaires || {};
+  const rn = sig.resultat_net || data.resultat_net || ((data.produits||0)-(data.charges||0));
+  const charges = data.charges || 0;
+  const produits = data.produits || 0;
+  const margePct = produits > 0 ? ((produits - charges) / produits * 100) : 0;
+
+  // Tableau détaillé charges par catégorie
+  const chargesCat = data.charges_par_categorie || [];
+  const produitsCat = data.produits_par_categorie || [];
+
+  const renderCategorie = (groupe, isCharge) => {
+    const cls = isCharge ? 'neg' : 'pos';
+    const lignes = (groupe.lignes||[]).map(l =>
+      `<tr><td class="mono" style="color:var(--t2);padding-left:1.5rem">${l.numero}</td><td>${l.libelle}</td><td class="tr ${cls}">${fmtEur(l.montant)}</td></tr>`
+    ).join('');
+    return `<tr style="background:var(--s3);font-weight:600"><td colspan="2">▸ ${groupe.categorie}</td><td class="tr ${cls}">${fmtEur(groupe.montant)}</td></tr>${lignes}`;
+  };
+
+  const chargesRows = chargesCat.length
+    ? chargesCat.map(g => renderCategorie(g, true)).join('')
+    : '<tr><td colspan="3" style="color:var(--t3);text-align:center">Aucune charge</td></tr>';
+  const produitsRows = produitsCat.length
+    ? produitsCat.map(g => renderCategorie(g, false)).join('')
+    : '<tr><td colspan="3" style="color:var(--t3);text-align:center">Aucun produit</td></tr>';
+
   c.innerHTML = `
-    <div class="mg mg3">
-      <div class="mc"><div class="ml">Produits (classe 7)</div><div class="mv pos">${fmtEur(data.produits)}</div></div>
-      <div class="mc"><div class="ml">Charges (classe 6)</div><div class="mv neg">${fmtEur(data.charges)}</div></div>
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">📈</div><div class="fb"><div class="ftt">Compte de résultat détaillé — Exercice ${annee}</div><div class="fdesc">Décomposé par catégorie PCG (60-69 charges, 70-79 produits)</div></div></div>
+
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Produits totaux</div><div class="mv pos">${fmtEur(produits)}</div></div>
+      <div class="mc"><div class="ml">Charges totales</div><div class="mv neg">${fmtEur(charges)}</div></div>
       <div class="mc"><div class="ml">Résultat net</div><div class="mv" style="color:${rn>=0?'var(--g)':'var(--r)'}">${fmtEur(rn)}</div></div>
+      <div class="mc"><div class="ml">Marge nette</div><div class="mv" style="color:${margePct>=0?'var(--g)':'var(--r)'}">${margePct.toFixed(1)}%</div></div>
     </div>
-    <div class="card" style="text-align:center;padding:2rem">
-      <div style="font-size:11px;color:var(--t2);text-transform:uppercase;margin-bottom:8px">Résultat net — Exercice ${annee}</div>
-      <div style="font-size:42px;font-weight:800;color:${rn>=0?'var(--g)':'var(--r)'}">${fmtEur(rn)}</div>
-      <div style="font-size:13px;color:var(--t2);margin-top:8px">${rn>=0?'Exercice bénéficiaire ✓':'Exercice déficitaire'}</div>
+
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">📊 Soldes intermédiaires de gestion (SIG)</div>
+      <table>
+        <thead><tr><th>Indicateur</th><th class="tr">Produits</th><th class="tr">Charges</th><th class="tr">Solde</th></tr></thead>
+        <tbody>
+          <tr style="background:var(--s3);font-weight:600">
+            <td>I — Résultat d'exploitation</td>
+            <td class="tr pos">${fmtEur(sig.produits_exploitation)}</td>
+            <td class="tr neg">${fmtEur(sig.charges_exploitation)}</td>
+            <td class="tr ${sig.resultat_exploitation>=0?'pos':'neg'}" style="font-weight:700">${fmtEur(sig.resultat_exploitation)}</td>
+          </tr>
+          <tr style="background:var(--s3);font-weight:600">
+            <td>II — Résultat financier</td>
+            <td class="tr pos">${fmtEur(sig.produits_financiers)}</td>
+            <td class="tr neg">${fmtEur(sig.charges_financieres)}</td>
+            <td class="tr ${sig.resultat_financier>=0?'pos':'neg'}" style="font-weight:700">${fmtEur(sig.resultat_financier)}</td>
+          </tr>
+          <tr style="background:var(--bb);font-weight:700">
+            <td>III — Résultat courant (I + II)</td>
+            <td class="tr">—</td>
+            <td class="tr">—</td>
+            <td class="tr ${sig.resultat_courant>=0?'pos':'neg'}">${fmtEur(sig.resultat_courant)}</td>
+          </tr>
+          <tr style="background:var(--s3);font-weight:600">
+            <td>IV — Résultat exceptionnel</td>
+            <td class="tr pos">${fmtEur(sig.produits_exceptionnels)}</td>
+            <td class="tr neg">${fmtEur(sig.charges_exceptionnelles)}</td>
+            <td class="tr ${sig.resultat_exceptionnel>=0?'pos':'neg'}" style="font-weight:700">${fmtEur(sig.resultat_exceptionnel)}</td>
+          </tr>
+          <tr>
+            <td>V — Impôt sur les bénéfices</td>
+            <td class="tr">—</td>
+            <td class="tr neg">${fmtEur(sig.impots_benefices)}</td>
+            <td class="tr neg">- ${fmtEur(sig.impots_benefices)}</td>
+          </tr>
+          <tr style="background:linear-gradient(135deg,#EFF6FF,#FFFFFF);font-weight:800;font-size:14px">
+            <td>RÉSULTAT NET (III + IV − V)</td>
+            <td class="tr">—</td>
+            <td class="tr">—</td>
+            <td class="tr ${rn>=0?'pos':'neg'}" style="font-size:16px">${fmtEur(rn)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct">📋 Détail des charges (classe 6)</div><span class="tag tr2">${fmtEur(charges)}</span></div>
+        <table>
+          <thead><tr><th>Compte</th><th>Libellé</th><th class="tr">Montant</th></tr></thead>
+          <tbody>${chargesRows}<tr class="sr" style="background:var(--bb)"><td></td><td><strong>TOTAL CHARGES</strong></td><td class="tr neg"><strong>${fmtEur(charges)}</strong></td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">📋 Détail des produits (classe 7)</div><span class="tag tg">${fmtEur(produits)}</span></div>
+        <table>
+          <thead><tr><th>Compte</th><th>Libellé</th><th class="tr">Montant</th></tr></thead>
+          <tbody>${produitsRows}<tr class="sr" style="background:var(--bb)"><td></td><td><strong>TOTAL PRODUITS</strong></td><td class="tr pos"><strong>${fmtEur(produits)}</strong></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="background:linear-gradient(135deg,${rn>=0?'#F0FDF4':'#FEF2F2'},#FFFFFF);text-align:center;padding:2rem">
+      <div style="font-size:11px;color:var(--t2);text-transform:uppercase;margin-bottom:8px">Résultat net de l'exercice ${annee}</div>
+      <div style="font-size:48px;font-weight:800;color:${rn>=0?'var(--g)':'var(--r)'}">${fmtEur(rn)}</div>
+      <div style="font-size:14px;color:var(--t2);margin-top:8px">${rn>=0?'✓ Exercice bénéficiaire':'⚠ Exercice déficitaire'}</div>
+      <div style="margin-top:1rem"><button class="btn btn-p" onclick="exportPage('resultat')">📄 Exporter en PDF</button></div>
     </div>`;
 }
 
