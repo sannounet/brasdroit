@@ -3133,20 +3133,102 @@ async function loadJudiciaire() {
 
 // ── Liasse fiscale ──
 async function loadLiasse() {
-  const annee = (window._exercice||new Date().getFullYear());
+  const annee = window._exercice || new Date().getFullYear();
   const data = await api.get('/api/compta/liasse?annee='+annee);
   const c = document.querySelector('#p-liasse .content');
   if (!c||!data) return;
-  const makeRows = (obj) => Object.entries(obj||{}).map(([code,item]) =>
-    `<div class="lf"><span class="mono" style="color:var(--t2)">${code}</span><span>${item.libelle||''}</span><input class="li auto" value="${fmtEur(item.montant||0)}" readonly><span style="font-size:11px;color:var(--t2)">Auto</span></div>`
-  ).join('');
+
+  // Libellés officiels CERFA
+  const libelles = {
+    AA_immobilisations_incorporelles: 'Immobilisations incorporelles (fonds, brevets, logiciels)',
+    AB_immobilisations_corporelles: 'Immobilisations corporelles (matériel, mobilier)',
+    BJ_stocks_et_en_cours: 'Stocks et en-cours',
+    BX_creances_clients: 'Créances clients et comptes rattachés',
+    BY_autres_creances: 'Autres créances (fiscales, sociales)',
+    CF_disponibilites: 'Disponibilités (banque, caisse)',
+    CO_total_actif: 'TOTAL ACTIF',
+    DA_capital: 'Capital social et primes',
+    DI_resultat_exercice: 'Résultat de l\'exercice',
+    DV_dettes_fournisseurs: 'Dettes fournisseurs et comptes rattachés',
+    DW_dettes_fiscales_sociales: 'Dettes fiscales et sociales',
+    EE_total_passif: 'TOTAL PASSIF',
+    FA_ventes_marchandises: 'Ventes de marchandises',
+    FC_production_vendue: 'Production vendue (biens et services)',
+    GF_charges_exploitation: 'Total charges d\'exploitation',
+    GG_resultat_exploitation: 'RÉSULTAT D\'EXPLOITATION',
+    GP_produits_financiers: 'Produits financiers',
+    GQ_charges_financieres: 'Charges financières',
+    GR_resultat_financier: 'RÉSULTAT FINANCIER',
+    HB_produits_exceptionnels: 'Produits exceptionnels',
+    HC_charges_exceptionnelles: 'Charges exceptionnelles',
+    HD_resultat_exceptionnel: 'RÉSULTAT EXCEPTIONNEL',
+    HK_impot_benefices: 'Impôt sur les bénéfices',
+    HN_resultat_net: 'RÉSULTAT NET DE L\'EXERCICE',
+  };
+
+  const makeRows = (obj, opts = {}) => {
+    return Object.entries(obj||{}).map(([code, montant]) => {
+      const cleanCode = code.split('_')[0];
+      const libelle = libelles[code] || code.replace(/_/g, ' ');
+      const isTotal = code.startsWith('CO_') || code.startsWith('EE_') || code.startsWith('GG_') || code.startsWith('GR_') || code.startsWith('HD_') || code.startsWith('HN_');
+      const valueColor = opts.colored ? (montant >= 0 ? 'var(--g)' : 'var(--r)') : 'var(--t)';
+      return `<tr ${isTotal?'style="background:var(--bb);font-weight:700"':''}>
+        <td class="mono" style="color:var(--t2)">${cleanCode}</td>
+        <td>${libelle}</td>
+        <td class="tr" style="color:${valueColor};font-family:monospace">${fmtEur(montant)}</td>
+      </tr>`;
+    }).join('');
+  };
+
+  const actif = data.cerfa_2050_actif || data.actif_2050 || {};
+  const passif = data.cerfa_2051_passif || data.passif_2051 || {};
+  const resultat = data.cerfa_2052_resultat || data.resultat_2052 || {};
+
+  const totalActif = actif.CO_total_actif || 0;
+  const totalPassif = passif.EE_total_passif || 0;
+  const resultatNet = resultat.HN_resultat_net || 0;
+
   c.innerHTML = `
-    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">Liasse auto-remplie depuis la comptabilité — Exercice ${annee}</div></div></div>
-    <div class="g2">
-      <div class="card"><div class="ct" style="margin-bottom:.75rem">2050 — Actif</div>${makeRows(data.actif_2050||data['2050']||{})}</div>
-      <div class="card"><div class="ct" style="margin-bottom:.75rem">2051 — Passif</div>${makeRows(data.passif_2051||data['2051']||{})}</div>
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">Liasse fiscale auto-remplie — Exercice ${annee}</div><div class="fdesc">Données calculées automatiquement à partir de votre comptabilité (PCG)</div></div></div>
+
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Total Actif</div><div class="mv" style="color:var(--b)">${fmtEur(totalActif)}</div></div>
+      <div class="mc"><div class="ml">Total Passif</div><div class="mv" style="color:var(--p)">${fmtEur(totalPassif)}</div></div>
+      <div class="mc"><div class="ml">Résultat net ${annee}</div><div class="mv" style="color:${resultatNet>=0?'var(--g)':'var(--r)'}">${fmtEur(resultatNet)}</div></div>
     </div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">2052 — Compte de résultat</div>${makeRows(data.resultat_2052||data['2052']||{})}</div>`;
+
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2050 — Bilan Actif</div>
+        <table>
+          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant net</th></tr></thead>
+          <tbody>${makeRows(actif)}</tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2051 — Bilan Passif</div>
+        <table>
+          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th></tr></thead>
+          <tbody>${makeRows(passif)}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2052 — Compte de résultat</div>
+      <table>
+        <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th></tr></thead>
+        <tbody>${makeRows(resultat, {colored: true})}</tbody>
+      </table>
+    </div>
+
+    <div class="card" style="background:linear-gradient(135deg,#EFF6FF,#FFFFFF);text-align:center;padding:1.5rem">
+      <div style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:1rem">
+        <div><div class="ml">Bilan équilibré ?</div><div style="font-size:18px;font-weight:700;color:${Math.abs(totalActif-totalPassif)<1?'var(--g)':'var(--r)'}">${Math.abs(totalActif-totalPassif)<1?'✓ Équilibré':'⚠ Écart '+fmtEur(totalActif-totalPassif)}</div></div>
+        <div><div class="ml">Statut</div><div style="font-size:18px;font-weight:700;color:var(--a)">📝 Brouillon</div></div>
+        <div><button class="btn btn-p" onclick="exportPage('liasse')">📄 Export Cerfa</button></div>
+      </div>
+    </div>`;
 }
 
 // ── Écarts ──
