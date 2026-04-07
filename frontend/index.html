@@ -3004,17 +3004,106 @@ async function loadResultat() {
 
 // ── Ratios ──
 async function loadRatios() {
-  const annee = (window._exercice||new Date().getFullYear());
+  const annee = window._exercice || new Date().getFullYear();
   const data = await api.get('/api/compta/ratios?annee='+annee);
   const c = document.querySelector('#p-ratios .content');
   if (!c||!data) return;
-  const mb=data.marge_brute||0,rn=data.rentabilite_nette||0,dso=data.dso||0,re=data.ratio_endettement||0;
+
+  const soldes = data.soldes || {};
+  const det = data.details || {};
+
+  // Helper pour afficher un ratio avec couleur de seuil
+  const ratioCard = (label, value, unit, color, info) => {
+    return `<div class="mc"><div class="ml">${label}</div><div class="mv" style="color:${color}">${value}${unit||''}</div>${info?'<div class="mt" style="color:var(--t3)">'+info+'</div>':''}</div>`;
+  };
+
+  // Couleurs selon seuils
+  const colorPct = (v, good, bad) => v >= good ? 'var(--g)' : v >= bad ? 'var(--a)' : 'var(--r)';
+  const colorJours = (v, good, bad) => v <= good ? 'var(--g)' : v <= bad ? 'var(--a)' : 'var(--r)';
+
   c.innerHTML = `
-    <div class="mg mg4">
-      <div class="mc"><div class="ml">Marge brute</div><div class="mv" style="color:${mb>30?'var(--g)':'var(--a)'}">${mb.toFixed(1)}%</div></div>
-      <div class="mc"><div class="ml">Rentabilité nette</div><div class="mv" style="color:${rn>0?'var(--g)':'var(--r)'}">${rn.toFixed(1)}%</div></div>
-      <div class="mc"><div class="ml">DSO (jours)</div><div class="mv" style="color:${dso<45?'var(--g)':dso<60?'var(--a)':'var(--r)'}">${Math.round(dso)} j</div></div>
-      <div class="mc"><div class="ml">Endettement</div><div class="mv" style="color:${re<100?'var(--g)':'var(--r)'}">${re.toFixed(1)}%</div></div>
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">📊</div><div class="fb"><div class="ftt">Ratios financiers — Exercice ${annee}</div><div class="fdesc">Tous les indicateurs clés de votre santé financière</div></div></div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ct" style="margin-bottom:.75rem">💰 Soldes de gestion</div>
+      <div class="mg mg3">
+        <div class="mc"><div class="ml">Chiffre d'affaires</div><div class="mv pos">${fmtEur(soldes.ca)}</div></div>
+        <div class="mc"><div class="ml">Valeur ajoutée</div><div class="mv pos">${fmtEur(soldes.valeur_ajoutee)}</div></div>
+        <div class="mc"><div class="ml">EBE (Excédent brut)</div><div class="mv" style="color:${soldes.ebe>=0?'var(--g)':'var(--r)'}">${fmtEur(soldes.ebe)}</div></div>
+        <div class="mc"><div class="ml">Résultat d'exploitation</div><div class="mv" style="color:${soldes.resultat_exploitation>=0?'var(--g)':'var(--r)'}">${fmtEur(soldes.resultat_exploitation)}</div></div>
+        <div class="mc"><div class="ml">Résultat net</div><div class="mv" style="color:${soldes.resultat_net>=0?'var(--g)':'var(--r)'}">${fmtEur(soldes.resultat_net)}</div></div>
+        <div class="mc"><div class="ml">CAF</div><div class="mv" style="color:${soldes.caf>=0?'var(--g)':'var(--r)'}">${fmtEur(soldes.caf)}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ct" style="margin-bottom:.75rem">📈 Rentabilité</div>
+      <div class="mg mg4">
+        ${ratioCard('Marge brute', data.marge_brute_pct.toFixed(1), '%', colorPct(data.marge_brute_pct, 30, 15), 'Idéal > 30%')}
+        ${ratioCard('Marge EBE', data.marge_ebe_pct.toFixed(1), '%', colorPct(data.marge_ebe_pct, 15, 5), 'Idéal > 15%')}
+        ${ratioCard('Marge exploitation', data.marge_exploitation_pct.toFixed(1), '%', colorPct(data.marge_exploitation_pct, 10, 3), 'Idéal > 10%')}
+        ${ratioCard('Marge nette', data.rentabilite_nette_pct.toFixed(1), '%', colorPct(data.rentabilite_nette_pct, 5, 0), 'Idéal > 5%')}
+        ${ratioCard('Rentabilité capitaux', data.rentabilite_capitaux_pct.toFixed(1), '%', colorPct(data.rentabilite_capitaux_pct, 15, 5), 'ROE — Idéal > 15%')}
+        ${ratioCard('Rentabilité économique', data.rentabilite_economique_pct.toFixed(1), '%', colorPct(data.rentabilite_economique_pct, 8, 3), 'ROA — Idéal > 8%')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ct" style="margin-bottom:.75rem">🏛 Structure financière</div>
+      <div class="mg mg4">
+        ${ratioCard('Autonomie financière', data.autonomie_financiere_pct.toFixed(1), '%', colorPct(data.autonomie_financiere_pct, 30, 20), 'Capitaux/Actif')}
+        ${ratioCard('Endettement', (data.ratio_endettement*100).toFixed(0), '%', data.ratio_endettement<1?'var(--g)':data.ratio_endettement<2?'var(--a)':'var(--r)', 'Dettes/Capitaux')}
+        ${ratioCard('Couverture emplois', data.couverture_emplois_pct.toFixed(0), '%', colorPct(data.couverture_emplois_pct, 100, 80), 'Ressources/Immo')}
+        ${ratioCard('Capacité remboursement', data.capacite_remboursement_annees.toFixed(1), ' ans', data.capacite_remboursement_annees<3?'var(--g)':data.capacite_remboursement_annees<5?'var(--a)':'var(--r)', 'Idéal < 3 ans')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ct" style="margin-bottom:.75rem">💧 Liquidité et trésorerie</div>
+      <div class="mg mg4">
+        ${ratioCard('Liquidité générale', data.liquidite_generale.toFixed(2), '', data.liquidite_generale>=1.5?'var(--g)':data.liquidite_generale>=1?'var(--a)':'var(--r)', 'Idéal > 1.5')}
+        ${ratioCard('Liquidité immédiate', data.liquidite_immediate.toFixed(2), '', data.liquidite_immediate>=0.5?'var(--g)':data.liquidite_immediate>=0.2?'var(--a)':'var(--r)', 'Idéal > 0.5')}
+        ${ratioCard('Fonds de roulement', fmtEur(data.fonds_roulement), '', data.fonds_roulement>=0?'var(--g)':'var(--r)', 'Doit être > 0')}
+        ${ratioCard('Trésorerie nette', fmtEur(data.tresorerie_nette), '', data.tresorerie_nette>=0?'var(--g)':'var(--r)', 'FR - BFR')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ct" style="margin-bottom:.75rem">⚙ Ratios d'activité et gestion</div>
+      <div class="mg mg4">
+        ${ratioCard('DSO (délai clients)', data.dso_jours.toFixed(0), ' j', colorJours(data.dso_jours, 45, 60), 'Idéal < 45 jours')}
+        ${ratioCard('DPO (délai fournisseurs)', data.dpo_jours.toFixed(0), ' j', data.dpo_jours>=30?'var(--g)':'var(--a)', 'Idéal > 30 jours')}
+        ${ratioCard('Rotation stocks', data.rotation_stocks.toFixed(1), 'x', data.rotation_stocks>=4?'var(--g)':'var(--a)', 'Fois par an')}
+        ${ratioCard('Productivité personnel', data.productivite_personnel.toFixed(2), '', data.productivite_personnel>=1.5?'var(--g)':'var(--a)', 'VA/Charges perso')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">📋 Données utilisées pour le calcul</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem">
+        <table style="font-size:12px">
+          <thead><tr><th colspan="2">Compte de résultat</th></tr></thead>
+          <tbody>
+            <tr><td>Produits totaux</td><td class="tr pos">${fmtEur(det.produits)}</td></tr>
+            <tr><td>Achats (60x)</td><td class="tr neg">${fmtEur(det.achats)}</td></tr>
+            <tr><td>Services extérieurs (61-62)</td><td class="tr neg">${fmtEur(det.services_ext)}</td></tr>
+            <tr><td>Charges de personnel (64x)</td><td class="tr neg">${fmtEur(det.charges_personnel)}</td></tr>
+            <tr><td>Dotations (68x)</td><td class="tr neg">${fmtEur(det.dotations)}</td></tr>
+            <tr><td>Charges financières (66x)</td><td class="tr neg">${fmtEur(det.charges_financieres)}</td></tr>
+          </tbody>
+        </table>
+        <table style="font-size:12px">
+          <thead><tr><th colspan="2">Bilan</th></tr></thead>
+          <tbody>
+            <tr><td>Total Actif</td><td class="tr">${fmtEur(det.total_actif)}</td></tr>
+            <tr><td>Actif circulant</td><td class="tr">${fmtEur(det.actif_circulant)}</td></tr>
+            <tr><td>Disponibilités</td><td class="tr pos">${fmtEur(det.disponibilites)}</td></tr>
+            <tr><td>Capitaux propres</td><td class="tr">${fmtEur(det.capitaux_propres)}</td></tr>
+            <tr><td>Dettes financières</td><td class="tr neg">${fmtEur(det.dettes_financieres)}</td></tr>
+            <tr><td>Dettes court terme</td><td class="tr neg">${fmtEur(det.dettes_court_terme)}</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>`;
 }
 

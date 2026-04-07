@@ -414,7 +414,7 @@ def ratios(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Ratios financiers cles."""
+    """Ratios financiers complets : rentabilité, structure, liquidité, gestion."""
     eid = current_user.entreprise_id
 
     ecritures = db.query(Ecriture).filter(
@@ -427,62 +427,173 @@ def ratios(
     ).all()
     compte_classe = {c.numero: c.classe for c in comptes}
 
+    # Accumulateurs par poste
     charges = 0.0
     produits = 0.0
-    achats = 0.0      # comptes 60x
-    dettes = 0.0      # classe 4 credit (fournisseurs, fiscal, social)
-    capitaux = 0.0    # classe 1 credit (capitaux propres)
-    creances = 0.0    # classe 4 debit (clients)
+    achats = 0.0
+    charges_personnel = 0.0
+    charges_financieres = 0.0
+    impots = 0.0
+    dotations = 0.0
+    services_ext = 0.0
+
+    immobilisations = 0.0
+    stocks = 0.0
+    creances_clients = 0.0
+    autres_creances = 0.0
+    disponibilites = 0.0
+    capitaux_propres = 0.0
+    dettes_fin = 0.0
+    dettes_fournisseurs = 0.0
+    dettes_fiscales = 0.0
 
     for e in ecritures:
         montant = float(e.montant or 0)
-        classe_d = compte_classe.get(e.compte_debit) or _classe_from_numero(e.compte_debit)
-        classe_c = compte_classe.get(e.compte_credit) or _classe_from_numero(e.compte_credit)
+        cd = e.compte_debit or ""
+        cc = e.compte_credit or ""
+        classe_d = compte_classe.get(cd) or _classe_from_numero(cd)
+        classe_c = compte_classe.get(cc) or _classe_from_numero(cc)
 
+        # Charges (debit classe 6)
         if classe_d == 6:
             charges += montant
-            if e.compte_debit.startswith("60"):
-                achats += montant
+            if cd.startswith("60"): achats += montant
+            elif cd.startswith("61") or cd.startswith("62"): services_ext += montant
+            elif cd.startswith("63"): impots += montant
+            elif cd.startswith("64"): charges_personnel += montant
+            elif cd.startswith("66"): charges_financieres += montant
+            elif cd.startswith("68"): dotations += montant
+
+        # Produits (credit classe 7)
         if classe_c == 7:
             produits += montant
 
-        # Creances clients (debit classe 4)
-        if classe_d == 4:
-            creances += montant
-        # Dettes (credit classe 4)
-        if classe_c == 4:
-            dettes += montant
-        # Capitaux propres (credit classe 1)
-        if classe_c == 1:
-            capitaux += montant
+        # ACTIF
+        if classe_d == 2: immobilisations += montant
+        elif classe_d == 3: stocks += montant
+        elif classe_d == 4:
+            if cd.startswith("411"): creances_clients += montant
+            else: autres_creances += montant
+        elif classe_d == 5: disponibilites += montant
 
-    # CA depuis factures reglees
-    ca = db.query(func.coalesce(func.sum(Facture.montant_ht), 0)).filter(
+        # PASSIF
+        if classe_c == 1: capitaux_propres += montant
+        elif classe_c == 16: dettes_fin += montant
+        elif classe_c == 4:
+            if cc.startswith("401"): dettes_fournisseurs += montant
+            else: dettes_fiscales += montant
+
+    # CA HT depuis factures reglees
+    ca = float(db.query(func.coalesce(func.sum(Facture.montant_ht), 0)).filter(
         Facture.entreprise_id == eid,
         extract("year", Facture.date_facture) == annee,
         Facture.statut == StatutFacture.reglee,
-    ).scalar()
-    ca = float(ca)
+    ).scalar())
 
-    marge_brute = ((produits - achats) / produits * 100) if produits else 0
-    rentabilite = ((produits - charges) / produits * 100) if produits else 0
-    dso = (creances / ca * 360) if ca else 0
-    ratio_endettement = (dettes / capitaux) if capitaux else 0
+    # CA TTC pour DSO
+    ca_ttc = float(db.query(func.coalesce(func.sum(Facture.montant_ttc), 0)).filter(
+        Facture.entreprise_id == eid,
+        extract("year", Facture.date_facture) == annee,
+    ).scalar())
+
+    resultat_net = produits - charges
+    valeur_ajoutee = produits - achats - services_ext
+    ebe = valeur_ajoutee - charges_personnel - impots
+    rex = ebe - dotations
+    capacite_autofinancement = resultat_net + dotations
+
+    actif_circulant = stocks + creances_clients + autres_creances + disponibilites
+    total_actif = immobilisations + actif_circulant
+    dettes_court_terme = dettes_fournisseurs + dettes_fiscales
+    total_dettes = dettes_fin + dettes_court_terme
+    ressources_stables = capitaux_propres + dettes_fin
+
+    # ─── CALCUL DES RATIOS ───
+    def safe_div(a, b):
+        return (a / b) if b else 0
+
+    # 1. Rentabilité
+    marge_brute = safe_div(produits - achats, produits) * 100 if produits else 0
+    marge_commerciale = safe_div(produits - achats, produits) * 100 if produits else 0
+    marge_ebe = safe_div(ebe, produits) * 100 if produits else 0
+    marge_exploitation = safe_div(rex, produits) * 100 if produits else 0
+    rentabilite_nette = safe_div(resultat_net, produits) * 100 if produits else 0
+    rentabilite_capitaux = safe_div(resultat_net, capitaux_propres) * 100 if capitaux_propres else 0
+    rentabilite_economique = safe_div(rex, total_actif) * 100 if total_actif else 0
+
+    # 2. Structure financière
+    autonomie_financiere = safe_div(capitaux_propres, total_actif) * 100 if total_actif else 0
+    ratio_endettement = safe_div(total_dettes, capitaux_propres) if capitaux_propres else 0
+    capacite_remboursement = safe_div(dettes_fin, capacite_autofinancement) if capacite_autofinancement > 0 else 0
+    couverture_emplois = safe_div(ressources_stables, immobilisations) * 100 if immobilisations else 0
+
+    # 3. Liquidité
+    liquidite_generale = safe_div(actif_circulant, dettes_court_terme) if dettes_court_terme else 0
+    liquidite_immediate = safe_div(disponibilites, dettes_court_terme) if dettes_court_terme else 0
+    fr = ressources_stables - immobilisations  # Fonds de roulement
+    bfr = (stocks + creances_clients) - dettes_fournisseurs  # Besoin en FR
+    tresorerie_nette = fr - bfr
+
+    # 4. Gestion / Activité
+    dso = safe_div(creances_clients, ca_ttc) * 360 if ca_ttc else 0
+    dpo = safe_div(dettes_fournisseurs, achats * 1.20) * 360 if achats else 0  # Délai paiement fournisseurs
+    rotation_stocks = safe_div(achats, stocks) if stocks else 0
+    productivite = safe_div(valeur_ajoutee, charges_personnel) if charges_personnel else 0
 
     return {
         "annee": annee,
+        # Rentabilité
         "marge_brute_pct": round(marge_brute, 2),
-        "rentabilite_nette_pct": round(rentabilite, 2),
-        "dso_jours": round(dso, 1),
+        "marge_commerciale_pct": round(marge_commerciale, 2),
+        "marge_ebe_pct": round(marge_ebe, 2),
+        "marge_exploitation_pct": round(marge_exploitation, 2),
+        "rentabilite_nette_pct": round(rentabilite_nette, 2),
+        "rentabilite_capitaux_pct": round(rentabilite_capitaux, 2),
+        "rentabilite_economique_pct": round(rentabilite_economique, 2),
+        # Structure financière
+        "autonomie_financiere_pct": round(autonomie_financiere, 2),
         "ratio_endettement": round(ratio_endettement, 2),
+        "capacite_remboursement_annees": round(capacite_remboursement, 2),
+        "couverture_emplois_pct": round(couverture_emplois, 2),
+        # Liquidité
+        "liquidite_generale": round(liquidite_generale, 2),
+        "liquidite_immediate": round(liquidite_immediate, 2),
+        "fonds_roulement": round(fr, 2),
+        "besoin_fonds_roulement": round(bfr, 2),
+        "tresorerie_nette": round(tresorerie_nette, 2),
+        # Gestion
+        "dso_jours": round(dso, 1),
+        "dpo_jours": round(dpo, 1),
+        "rotation_stocks": round(rotation_stocks, 2),
+        "productivite_personnel": round(productivite, 2),
+        # Soldes de gestion
+        "soldes": {
+            "ca": round(produits, 2),
+            "valeur_ajoutee": round(valeur_ajoutee, 2),
+            "ebe": round(ebe, 2),
+            "resultat_exploitation": round(rex, 2),
+            "resultat_net": round(resultat_net, 2),
+            "caf": round(capacite_autofinancement, 2),
+        },
         "details": {
             "produits": round(produits, 2),
             "charges": round(charges, 2),
             "achats": round(achats, 2),
+            "services_ext": round(services_ext, 2),
+            "charges_personnel": round(charges_personnel, 2),
+            "charges_financieres": round(charges_financieres, 2),
+            "dotations": round(dotations, 2),
             "ca_facture": round(ca, 2),
-            "creances": round(creances, 2),
-            "dettes": round(dettes, 2),
-            "capitaux_propres": round(capitaux, 2),
+            "creances": round(creances_clients, 2),
+            "dettes_fournisseurs": round(dettes_fournisseurs, 2),
+            "dettes_financieres": round(dettes_fin, 2),
+            "capitaux_propres": round(capitaux_propres, 2),
+            "immobilisations": round(immobilisations, 2),
+            "stocks": round(stocks, 2),
+            "disponibilites": round(disponibilites, 2),
+            "total_actif": round(total_actif, 2),
+            "actif_circulant": round(actif_circulant, 2),
+            "dettes_court_terme": round(dettes_court_terme, 2),
         },
     }
 
