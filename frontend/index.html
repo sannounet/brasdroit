@@ -2963,7 +2963,7 @@ async function loadEcarts(avecIA) {
       <div class="mc"><div class="ml">Écart résultat</div><div class="mv" style="color:${ecartResultat>=0?'var(--g)':'var(--r)'}">${ecartResultat>=0?'+':''}${fmtEur(ecartResultat)}</div></div>
     </div>
     ${data.nb_alertes > 0 ? `<div class="fd" style="margin-bottom:1rem"><div class="fic">⚠</div><div class="fb"><div class="ftt">${data.nb_alertes} ligne(s) en alerte (écart > 20%)</div></div></div>` : '<div class="fs" style="margin-bottom:1rem"><div class="fic">✓</div><div class="fb"><div class="ftt">Tous les écarts sont sous contrôle</div></div></div>'}
-    ${data.analyse_ia ? `<div class="card" style="margin-bottom:1rem;border-left:3px solid var(--p)"><div class="ct" style="margin-bottom:.5rem">🤖 Analyse Claude IA</div>${data.analyse_ia}</div>` : `<div style="text-align:center;margin-bottom:1rem"><button class="btn btn-pu" onclick="loadEcarts(true)">🤖 Lancer l'analyse Claude IA</button></div>`}
+    ${data.analyse_ia ? `<div class="card" style="margin-bottom:1rem;border-left:3px solid var(--p);background:linear-gradient(135deg,#FAF5FF,#FFFFFF)"><div class="ct" style="margin-bottom:.75rem;display:flex;align-items:center;gap:6px">🤖 Conseil de votre assistant IA</div><div style="font-size:14px;line-height:1.7;color:var(--t);white-space:pre-line">${data.analyse_ia.replace(/<[^>]+>/g,'')}</div></div>` : `<div style="text-align:center;margin-bottom:1rem"><button class="btn btn-pu" onclick="loadEcarts(true)">🤖 Demander conseil à l'IA</button></div>`}
     ${moisRows}`;
 }
 window.loadEcarts = loadEcarts;

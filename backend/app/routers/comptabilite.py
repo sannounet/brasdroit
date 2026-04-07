@@ -574,20 +574,31 @@ def ecarts_budget_reel(
                               "ecart_pct": c["ecart_pct"]} for c in comparaisons],
             "totaux": result["totaux"],
         }
-        prompt = f"""Tu es un expert-comptable. Analyse les ecarts entre le budget previsionnel et le realise de cette PME pour {annee}.
+        prompt = f"""Tu parles à un dirigeant d'entreprise qui n'a AUCUNE connaissance en comptabilité ni en informatique.
+Tu dois analyser ses prévisions de budget pour {annee} et lui expliquer en FRANCAIS SIMPLE et CLAIR ce qui se passe.
+
 Donnees: {contexte}
 
-Genere une analyse synthetique en HTML (sans markdown):
-1. <h3>Synthese globale</h3> : 2-3 phrases sur la situation generale
-2. <h3>Ecarts critiques</h3> : liste les 3 ecarts les plus importants avec leur cause probable
-3. <h3>Recommandations d'optimisation</h3> : 3-5 actions concretes priorisees pour reduire les ecarts negatifs
-4. <h3>Points positifs</h3> : ce qui fonctionne bien
+REGLES STRICTES:
+- Pas de HTML, pas de markdown, pas de tableaux
+- Pas de jargon technique (pas de "écart", "variance", "ratio", "DSO", etc.)
+- Utilise des phrases courtes et simples
+- Parle comme à un ami qui te demande conseil
+- Donne des montants en euros arrondis (pas de centimes)
+- Maximum 200 mots
+- Structure ton texte en 3 paragraphes simples séparés par des sauts de ligne :
 
-Sois concis (max 500 mots), chiffre les impacts, utilise <p>, <ul><li>, <strong>."""
+Paragraphe 1 — Comment ça va globalement (en 2-3 phrases simples). Exemple : "Cette année, votre entreprise a gagné 50 000 euros de plus que prévu, c'est une très bonne nouvelle."
+
+Paragraphe 2 — Ce qui ne va pas (les choses à corriger, en termes simples). Exemple : "Par contre, vous avez dépensé 8 000 euros de plus que prévu en marketing. C'est probablement parce que..."
+
+Paragraphe 3 — Ce que vous devriez faire maintenant (3 conseils concrets et simples). Exemple : "Pour améliorer la situation, vous pourriez : 1) Réduire vos dépenses marketing de moitié, 2) Demander à vos clients de payer plus vite, 3) Reporter l'achat de matériel."
+
+Réponds uniquement avec le texte, sans introduction ni formules de politesse."""
         try:
             result["analyse_ia"] = question_ia(prompt, contexte)
         except Exception as e:
-            result["analyse_ia"] = f"<p>Erreur IA: {str(e)}</p>"
+            result["analyse_ia"] = f"Erreur lors de l'analyse: {str(e)}"
 
     return result
 
