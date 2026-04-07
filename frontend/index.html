@@ -564,7 +564,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- FACTURES -->
 <div id="p-factures" class="panel">
-<div class="topbar"><div class="pt">Factures electroniques</div><div class="tb-r"><button class="btn btn-p" onclick="openModal('m-facture')">+ Nouvelle facture</button></div></div>
+<div class="topbar"><div class="pt">Factures electroniques</div><div class="tb-r"><button class="btn btn-p" onclick="_openFactureModal()">+ Nouvelle facture</button></div></div>
 <div class="content">
 <div class="mg mg4">
 <div class="mc"><div class="ml">Facture ce mois</div><div class="mv" style="color:var(--b)" id="dash-ca">48 240 &euro;</div></div>
@@ -1471,18 +1471,34 @@ input[type=number]{-moz-appearance:textfield}
 </div></div>
 
 <div class="mo" id="m-facture">
-<div class="modal"><div class="mh">Nouvelle facture<span class="mc2" onclick="closeModal('m-facture')">&times;</span></div>
-<div class="mrow"><div class="mlbl">Client</div><input type="text" placeholder="Nom du client"></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div class="mrow"><div class="mlbl">N&#176; facture</div><input type="text" value="FA-2026-043"></div>
-<div class="mrow"><div class="mlbl">BC origine</div><input type="text" placeholder="BC-2026-xxx"></div>
+<div class="modal" style="width:520px"><div class="mh">Nouvelle facture<span class="mc2" onclick="closeModal('m-facture')">&times;</span></div>
+<div class="mrow"><div class="mlbl">Client *</div>
+  <select id="fa-client"></select>
 </div>
-<div class="mrow"><div class="mlbl">Description</div><textarea rows="2" placeholder="Description de la prestation..."></textarea></div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div class="mrow"><div class="mlbl">Montant HT (&#8364;)</div><input type="number" placeholder="0.00"></div>
-<div class="mrow"><div class="mlbl">TVA</div><select><option>20%</option><option>10%</option><option>0%</option></select></div>
+  <div class="mrow"><div class="mlbl">Date facture *</div><input type="date" id="fa-date"></div>
+  <div class="mrow"><div class="mlbl">Date échéance *</div><input type="date" id="fa-echeance"></div>
 </div>
-<div style="display:flex;gap:7px;margin-top:.875rem"><button class="btn btn-p" style="flex:1" onclick="closeModal('m-facture')">Creer et envoyer</button><button class="btn" onclick="closeModal('m-facture')">Annuler</button></div>
+<div class="mrow"><div class="mlbl">BC origine (optionnel)</div><input type="text" id="fa-bc" placeholder="BC-2026-xxx"></div>
+<div class="mrow"><div class="mlbl">Objet / Description *</div><textarea id="fa-objet" rows="2" placeholder="Description de la prestation..."></textarea></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Montant HT (€) *</div><input type="number" id="fa-ht" step="0.01" placeholder="0.00" oninput="updateFactureTTC()"></div>
+  <div class="mrow"><div class="mlbl">Taux TVA</div>
+    <select id="fa-tva" onchange="updateFactureTTC()">
+      <option value="20">20%</option>
+      <option value="10">10%</option>
+      <option value="5.5">5.5%</option>
+      <option value="0">0%</option>
+    </select>
+  </div>
+</div>
+<div style="background:var(--s3);padding:.75rem;border-radius:var(--rad);font-size:13px;display:flex;justify-content:space-between">
+  <span>Total TTC</span><strong id="fa-ttc-display" style="color:var(--b);font-size:16px">0,00 €</strong>
+</div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitFacture()">✓ Créer la facture</button>
+  <button class="btn" onclick="closeModal('m-facture')">Annuler</button>
+</div>
 </div></div>
 
 <div class="mo" id="m-relance">
@@ -2010,6 +2026,9 @@ async function loadFactures() {
   const data = await api.get('/api/facturation/factures');
   if (!data) return;
   window._facturesData = data;
+  // Charger clients et entreprise pour le téléchargement PDF
+  if (!window._clientsCache) window._clientsCache = await api.get('/api/facturation/clients') || [];
+  if (!window._entrepriseCache) window._entrepriseCache = await api.get('/api/entreprise') || {};
   renderFactures();
 }
 
@@ -2057,15 +2076,18 @@ function renderFactures() {
   const dataRows = filtered.map(fact => {
     const cls = fact.statut === 'reglee' ? 'tg' : fact.statut === 'en_retard' ? 'tr2' : fact.statut === 'judiciaire' ? 'tp' : 'tw2';
     const label = {brouillon:'Brouillon',reglee:'Réglée', en_retard:'En retard', judiciaire:'Judiciaire', emise:'Émise', envoyee:'Envoyée', en_attente:'En attente'}[fact.statut] || fact.statut;
+    const client = (window._clientsCache||[]).find(c => c.id === fact.client_id);
+    const clientNom = client ? client.nom : '#'+fact.client_id;
     return `<tr>
       <td><b>${fact.numero}</b></td>
-      <td>${fact.client_id}</td>
+      <td>${clientNom}</td>
       <td>${fact.bc_origine || '—'}</td>
       <td>${fact.date_facture}</td>
       <td class="tr">${fmtEur(fact.montant_ht)}</td>
       <td class="tr ${fact.statut === 'en_retard' ? 'neg' : 'pos'}">${fmtEur(fact.montant_ttc)}</td>
       <td><span class="tag ${cls}">${label}</span></td>
-      <td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="telechargerFacture(${fact.id})" title="Télécharger PDF">📄</button>
         ${fact.statut !== 'reglee' ? `<button class="btn btn-sm btn-s" onclick="reglerFacture(${fact.id})" title="Marquer réglée">✓</button>` : ''}
         ${fact.statut === 'en_retard' ? `<button class="btn btn-sm btn-d" onclick="relancerFacture(${fact.id})" title="Relancer">📧</button>` : ''}
       </td>
@@ -2092,18 +2114,148 @@ window.resetFactureFilters = function() {
   renderFactures();
 };
 
-async function creerFacture() {
-  const client_id = parseInt(prompt('ID Client:') || '0');
-  const montant_ht = parseFloat(prompt('Montant HT (€):') || '0');
-  const objet = prompt('Objet:') || '';
-  if (!client_id || !montant_ht) return;
+// ── Modal nouvelle facture ──
+window._openFactureModal = async function() {
+  const clients = await api.get('/api/facturation/clients');
+  const sel = document.getElementById('fa-client');
+  if (sel && clients) {
+    sel.innerHTML = clients.map(c => `<option value="${c.id}" data-delai="${c.delai_paiement||30}">${c.nom}${c.ville?' — '+c.ville:''}</option>`).join('');
+  }
+  // Pré-remplir dates
   const today = new Date().toISOString().split('T')[0];
-  const echeance = new Date(Date.now() + 30*86400000).toISOString().split('T')[0];
+  document.getElementById('fa-date').value = today;
+  // Échéance = aujourd'hui + délai du premier client
+  if (sel && sel.options.length > 0) {
+    const delai = parseInt(sel.options[0].dataset.delai || '30');
+    document.getElementById('fa-echeance').value = new Date(Date.now() + delai*86400000).toISOString().split('T')[0];
+  }
+  ['fa-bc','fa-objet','fa-ht'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('fa-tva').value = '20';
+  updateFactureTTC();
+  openModal('m-facture');
+};
+
+window.updateFactureTTC = function() {
+  const ht = parseFloat(document.getElementById('fa-ht')?.value||'0');
+  const tva = parseFloat(document.getElementById('fa-tva')?.value||'20');
+  const ttc = ht * (1 + tva/100);
+  const el = document.getElementById('fa-ttc-display');
+  if (el) el.textContent = fmtEur(ttc);
+};
+
+window.submitFacture = async function() {
+  const client_id = parseInt(document.getElementById('fa-client')?.value || '0');
+  const date_facture = document.getElementById('fa-date')?.value || '';
+  const date_echeance = document.getElementById('fa-echeance')?.value || '';
+  const bc_origine = document.getElementById('fa-bc')?.value || null;
+  const objet = document.getElementById('fa-objet')?.value || '';
+  const montant_ht = parseFloat(document.getElementById('fa-ht')?.value || '0');
+  const taux_tva = parseFloat(document.getElementById('fa-tva')?.value || '20');
+
+  if (!client_id || !date_facture || !date_echeance || !objet || !montant_ht) {
+    showToast('Tous les champs obligatoires (*) doivent être remplis', 'error');
+    return;
+  }
+
   const data = await api.post('/api/facturation/factures', {
-    client_id, montant_ht, objet, date_facture: today, date_echeance: echeance
+    client_id, montant_ht, taux_tva, objet, date_facture, date_echeance, bc_origine
   });
-  if (data) { showToast('Facture ' + data.numero + ' créée', 'success'); loadFactures(); }
-}
+
+  if (data) {
+    showToast('Facture ' + data.numero + ' créée ✓', 'success');
+    closeModal('m-facture');
+    loadFactures();
+  }
+};
+
+window.telechargerFacture = function(id) {
+  const f = (window._facturesData||[]).find(x => x.id === id);
+  if (!f) { showToast('Facture introuvable','error'); return; }
+  const client = (window._clientsCache||[]).find(c => c.id === f.client_id) || {};
+  const ent = window._entrepriseCache || {};
+
+  const tva = parseFloat(f.taux_tva||20);
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${f.numero}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;padding:3rem;color:#1E293B;max-width:900px;margin:0 auto;font-size:13px}
+.head{display:flex;justify-content:space-between;border-bottom:3px solid #2563EB;padding-bottom:1rem;margin-bottom:2rem}
+.ent{font-size:11px;color:#475569;line-height:1.6}
+.ent h1{font-size:20px;color:#1E293B;margin-bottom:8px}
+.fac-info{text-align:right}
+.fac-info h2{font-size:24px;color:#2563EB;margin-bottom:4px}
+.fac-info .num{font-size:13px;color:#64748B}
+.dates{display:flex;gap:2rem;margin:1.5rem 0;padding:1rem;background:#F8FAFC;border-radius:8px}
+.dates div{flex:1}
+.dates strong{display:block;color:#94A3B8;font-size:10px;text-transform:uppercase}
+.client{margin:1.5rem 0;padding:1rem;border:1px solid #E2E8F0;border-radius:8px}
+.client strong{font-size:11px;color:#94A3B8;text-transform:uppercase}
+.client h3{font-size:15px;margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+th{background:#1E293B;color:#fff;padding:10px;text-align:left;font-size:11px;text-transform:uppercase}
+td{padding:12px 10px;border-bottom:1px solid #E2E8F0}
+.r{text-align:right}
+.totals{margin-left:auto;width:300px;margin-top:1rem}
+.totals tr{border:none}
+.totals td{padding:6px 12px;border:none}
+.totals .sub{background:#F8FAFC}
+.totals .total{background:#2563EB;color:#fff;font-size:16px;font-weight:700}
+.foot{margin-top:3rem;padding-top:1rem;border-top:1px solid #E2E8F0;font-size:10px;color:#94A3B8;text-align:center;line-height:1.8}
+@media print{body{padding:1.5rem}}
+</style></head><body>
+<div class="head">
+<div class="ent">
+<h1>${ent.nom||'Mon entreprise'}</h1>
+${ent.adresse?ent.adresse+'<br>':''}${ent.code_postal||''} ${ent.ville||''}<br>
+${ent.siret?'SIRET '+ent.siret+'<br>':''}${ent.tva_intra?'TVA '+ent.tva_intra+'<br>':''}
+${ent.email||''}${ent.telephone?' · '+ent.telephone:''}
+</div>
+<div class="fac-info">
+<h2>FACTURE</h2>
+<div class="num">N° ${f.numero}</div>
+${f.bc_origine?'<div class="num">BC : '+f.bc_origine+'</div>':''}
+</div>
+</div>
+
+<div class="dates">
+<div><strong>Date facture</strong>${f.date_facture||''}</div>
+<div><strong>Date d'échéance</strong>${f.date_echeance||''}</div>
+<div><strong>Statut</strong>${f.statut||''}</div>
+</div>
+
+<div class="client">
+<strong>Facturé à</strong>
+<h3>${client.nom||'Client #'+f.client_id}</h3>
+${client.adresse||''}<br>
+${client.code_postal||''} ${client.ville||''}<br>
+${client.siret?'SIRET '+client.siret:''}
+</div>
+
+<table>
+<thead><tr><th>Description</th><th class="r">Quantité</th><th class="r">Prix unitaire HT</th><th class="r">Total HT</th></tr></thead>
+<tbody>
+<tr><td>${f.objet||''}</td><td class="r">1</td><td class="r">${fmtEur(f.montant_ht)}</td><td class="r">${fmtEur(f.montant_ht)}</td></tr>
+</tbody>
+</table>
+
+<table class="totals">
+<tr class="sub"><td>Total HT</td><td class="r">${fmtEur(f.montant_ht)}</td></tr>
+<tr class="sub"><td>TVA (${tva}%)</td><td class="r">${fmtEur(f.montant_tva||(f.montant_ht*tva/100))}</td></tr>
+<tr class="total"><td>TOTAL TTC</td><td class="r">${fmtEur(f.montant_ttc)}</td></tr>
+</table>
+
+<div class="foot">
+Facture émise le ${f.date_facture||''} · Échéance ${f.date_echeance||''}<br>
+Conditions de paiement : ${client.delai_paiement||30} jours · TVA non applicable, art.293 B du CGI (si auto-entrepreneur)<br>
+${ent.nom||''} ${ent.siret?'· SIRET '+ent.siret:''} · Document généré par Bras Droit
+</div>
+</body></html>`;
+
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  showToast('Facture ouverte — Ctrl+P pour imprimer/PDF', 'info');
+};
 
 async function reglerFacture(id) {
   const data = await api.post('/api/facturation/factures/' + id + '/regler');

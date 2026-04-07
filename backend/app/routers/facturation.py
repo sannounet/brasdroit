@@ -17,6 +17,20 @@ from app.services.ia_service import generer_relance
 router = APIRouter(prefix="/api/facturation", tags=["Facturation"])
 
 
+@router.get("/clients")
+def list_clients(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Liste des clients de l'entreprise."""
+    clients = db.query(Client).filter(
+        Client.entreprise_id == current_user.entreprise_id,
+        Client.is_active == True,
+    ).order_by(Client.nom).all()
+    return [{
+        "id": c.id, "nom": c.nom, "siret": c.siret, "email": c.email,
+        "adresse": c.adresse, "code_postal": c.code_postal, "ville": c.ville,
+        "delai_paiement": c.delai_paiement,
+    } for c in clients]
+
+
 def next_numero_facture(db: Session, entreprise_id: int) -> str:
     """Génère le prochain numéro de facture FA-2026-XXX."""
     annee = date.today().year
