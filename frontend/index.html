@@ -2736,6 +2736,50 @@ window.resetBilanOverrides = function() {
   loadBilan();
 };
 
+window.toggleBilanDetail = async function(side, numero) {
+  const annee = window._currentBilanAnnee;
+  const row = document.getElementById('detail-'+side+'-'+numero);
+  const content = document.getElementById('detail-content-'+side+'-'+numero);
+  if (!row || !content) return;
+  if (row.style.display === 'table-row') { row.style.display = 'none'; return; }
+
+  row.style.display = 'table-row';
+  content.innerHTML = '<div style="color:var(--t3);text-align:center;padding:.5rem">Chargement...</div>';
+
+  // Récupérer les écritures depuis l'API
+  const sideBackend = side === 'actif' ? 'debit' : 'credit';
+  const data = await api.get('/api/compta/ecritures/compte/'+numero+'?annee='+annee+'&side='+sideBackend);
+  if (!data || !data.ecritures) {
+    content.innerHTML = '<div style="color:var(--r)">Erreur de chargement</div>';
+    return;
+  }
+
+  if (data.ecritures.length === 0) {
+    content.innerHTML = '<div style="color:var(--t3);font-style:italic">Aucune écriture pour ce compte</div>';
+    return;
+  }
+
+  const cls = side === 'actif' ? 'pos' : 'neg';
+  const rows = data.ecritures.map(e => `
+    <tr>
+      <td>${e.date}</td>
+      <td class="mono" style="color:var(--t2)">${e.numero_piece||'—'}</td>
+      <td>${e.libelle}</td>
+      <td class="mono" style="color:var(--t2)">↔ ${e.contre_compte}</td>
+      <td class="tr ${cls}">${fmtEur(e.montant)}</td>
+    </tr>
+  `).join('');
+
+  content.innerHTML = `
+    <div style="font-weight:600;margin-bottom:.5rem;color:var(--b)">📋 Détail des écritures du compte ${numero} (${data.nb} écriture${data.nb>1?'s':''})</div>
+    <table style="font-size:11.5px">
+      <thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th>Contrepartie</th><th class="tr">Montant</th></tr></thead>
+      <tbody>${rows}
+      <tr style="background:var(--bb);font-weight:700"><td colspan="4">TOTAL</td><td class="tr ${cls}">${fmtEur(data.total)}</td></tr>
+      </tbody>
+    </table>`;
+};
+
 async function loadBilan() {
   const annee = window._exercice || new Date().getFullYear();
   window._currentBilanAnnee = annee;
@@ -2803,7 +2847,9 @@ async function loadBilan() {
           const delBtn = l.custom
             ? `<button class="btn btn-sm btn-d" onclick="deleteBilanLine('_custom_${side}_${l.numero}')" title="Supprimer">×</button>`
             : (l.modifie ? `<button class="btn btn-sm" onclick="deleteBilanLine('${side}_${l.numero}')" title="Annuler modification">↺</button>` : '');
-          return `<tr><td class="mono" style="color:var(--t2)">${l.numero}</td><td>${l.libelle}${badges.join('')}</td><td class="tr" style="font-family:monospace">${fmtEur(l.montant)}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="editBilanLine('${side}','${l.numero}')" title="Modifier">✏</button>${delBtn}</td></tr>`;
+          const detailBtn = !l.custom ? `<button class="btn btn-sm" onclick="toggleBilanDetail('${side}','${l.numero}')" title="Voir le détail des écritures">▾</button>` : '';
+          return `<tr><td class="mono" style="color:var(--t2)">${l.numero}</td><td>${l.libelle}${badges.join('')}</td><td class="tr" style="font-family:monospace">${fmtEur(l.montant)}</td><td style="white-space:nowrap">${detailBtn}<button class="btn btn-sm" onclick="editBilanLine('${side}','${l.numero}')" title="Modifier">✏</button>${delBtn}</td></tr>
+            <tr id="detail-${side}-${l.numero}" style="display:none"><td colspan="4" style="background:var(--s3);padding:0"><div id="detail-content-${side}-${l.numero}" style="padding:.75rem 1.5rem;font-size:11.5px"></div></td></tr>`;
         }).join('');
     }).join('');
   };

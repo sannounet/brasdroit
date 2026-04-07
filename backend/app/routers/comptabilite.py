@@ -171,6 +171,42 @@ def bilan(
     }
 
 
+@router.get("/ecritures/compte/{numero}")
+def ecritures_par_compte(
+    numero: str,
+    annee: int = Query(...),
+    side: str = Query("debit", description="debit ou credit"),
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retourne toutes les écritures pour un compte donné dans l'année."""
+    eid = current_user.entreprise_id
+    q = db.query(Ecriture).filter(
+        Ecriture.entreprise_id == eid,
+        extract("year", Ecriture.date_ecriture) == annee,
+    )
+    if side == "debit":
+        q = q.filter(Ecriture.compte_debit == numero)
+    else:
+        q = q.filter(Ecriture.compte_credit == numero)
+    ecritures = q.order_by(Ecriture.date_ecriture).all()
+    total = sum(float(e.montant or 0) for e in ecritures)
+    return {
+        "numero": numero,
+        "side": side,
+        "total": round(total, 2),
+        "nb": len(ecritures),
+        "ecritures": [{
+            "id": e.id,
+            "date": str(e.date_ecriture),
+            "numero_piece": e.numero_piece,
+            "libelle": e.libelle,
+            "montant": float(e.montant or 0),
+            "contre_compte": e.compte_credit if side == "debit" else e.compte_debit,
+        } for e in ecritures],
+    }
+
+
 def _libelle_default(numero: str) -> str:
     """Libellé par défaut basé sur le numéro de compte PCG."""
     defaults = {
