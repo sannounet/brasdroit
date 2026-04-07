@@ -2701,44 +2701,45 @@ async function loadPaieParams() {
 // ── Charges patronales ──
 async function loadChargesPatronales() {
   const annee = window._exercice || new Date().getFullYear();
-  // Trouver le dernier mois avec des données pour cette année
-  let data = null;
-  let moisTrouve = 0;
-  for (let m = 12; m >= 1; m--) {
-    const r = await api.get('/api/paie/bulletins/'+annee+'/'+m);
-    if (r && r.bulletins && r.bulletins.length > 0) {
-      data = r;
-      moisTrouve = m;
-      break;
-    }
-  }
-
-  const tbody = document.getElementById('charges-pat-tbody');
-  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-  if (!data || !data.bulletins || data.bulletins.length === 0) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:1rem">Aucun bulletin de paie pour '+annee+'</td></tr>';
-    setVal('ch-masse', fmtEur(0));
-    setVal('ch-charges', fmtEur(0));
-    setVal('ch-cout', fmtEur(0));
+  const data = await api.get('/api/paie/bulletins/annee/'+annee);
+  const c = document.querySelector('#p-charges .content');
+  if (!c) return;
+  if (!data || data.total_bulletins === 0) {
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucun bulletin de paie pour '+annee+'</div>';
     return;
   }
 
-  const bulletins = data.bulletins;
-  let totalBrut=0, totalChPat=0, totalCout=0;
-  if (tbody) {
-    tbody.innerHTML = bulletins.map(b => {
-      const brut = parseFloat(b.salaire_brut)||0;
-      const chPat = parseFloat(b.cotis_patronales)||0;
-      const cout = brut + chPat;
-      totalBrut+=brut; totalChPat+=chPat; totalCout+=cout;
-      return `<tr><td>${b.employe_nom||'Employé #'+b.employe_id}</td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(chPat)}</td><td class="tr">${fmtEur(cout)}</td></tr>`;
-    }).join('');
-    tbody.innerHTML += `<tr class="subr"><td><strong>TOTAL ${moisNoms[moisTrouve]} ${annee}</strong></td><td class="tr"><strong>${fmtEur(totalBrut)}</strong></td><td class="tr neg"><strong>${fmtEur(totalChPat)}</strong></td><td class="tr"><strong>${fmtEur(totalCout)}</strong></td></tr>`;
-  }
-  setVal('ch-masse', fmtEur(totalBrut));
-  setVal('ch-charges', fmtEur(totalChPat));
-  setVal('ch-cout', fmtEur(totalCout));
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const dernierMois = data.dernier_mois;
+  const bulletins = data.par_mois[dernierMois] || [];
+
+  let tBrut=0, tChPat=0, tCout=0;
+  const rows = bulletins.map(b => {
+    const brut = b.salaire_brut||0, chPat = b.cotis_patronales||0, cout = brut + chPat;
+    tBrut+=brut; tChPat+=chPat; tCout+=cout;
+    return `<tr><td><strong>${b.employe_nom}</strong>${b.poste?'<div style="font-size:11px;color:var(--t2)">'+b.poste+'</div>':''}</td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(chPat)}</td><td class="tr">${fmtEur(cout)}</td></tr>`;
+  }).join('');
+
+  // Total annuel
+  let annualBrut=0, annualChPat=0;
+  Object.values(data.par_mois).forEach(mois => {
+    mois.forEach(b => { annualBrut += b.salaire_brut||0; annualChPat += b.cotis_patronales||0; });
+  });
+
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">${fmtEur(tBrut)}</div><div class="mt">${moisNoms[dernierMois]}</div></div>
+      <div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">${fmtEur(tChPat)}</div><div class="mt">${((tChPat/tBrut)*100).toFixed(0)}% du brut</div></div>
+      <div class="mc"><div class="ml">Coût employeur</div><div class="mv" style="color:var(--p)">${fmtEur(tCout)}</div><div class="mt">${moisNoms[dernierMois]}</div></div>
+      <div class="mc"><div class="ml">Charges YTD ${annee}</div><div class="mv neg">${fmtEur(annualChPat)}</div><div class="mt">Sur ${data.mois_avec_donnees.length} mois</div></div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Détail par employé — ${moisNoms[dernierMois]} ${annee}</div>
+      <table>
+        <thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Charges pat.</th><th class="tr">Coût employeur</th></tr></thead>
+        <tbody>${rows}<tr class="subr" style="background:var(--bb)"><td><strong>TOTAL</strong></td><td class="tr"><strong>${fmtEur(tBrut)}</strong></td><td class="tr neg"><strong>${fmtEur(tChPat)}</strong></td><td class="tr"><strong>${fmtEur(tCout)}</strong></td></tr></tbody>
+      </table>
+    </div>`;
 }
 
 // ── Trésorerie ──
@@ -3302,51 +3303,73 @@ async function loadURSSAF() {
 // ── DSN ──
 async function loadDSN() {
   const annee = window._exercice || new Date().getFullYear();
-  // Trouver le dernier mois avec des données
-  let data = null, moisTrouve = 0;
-  for (let m = 12; m >= 1; m--) {
-    const r = await api.get('/api/declarations/dsn?annee='+annee+'&mois='+m);
-    if (r && r.employes && r.employes.length > 0) { data = r; moisTrouve = m; break; }
-  }
+  const data = await api.get('/api/paie/bulletins/annee/'+annee);
   const c = document.querySelector('#p-dsn .content');
   if (!c) return;
-  if (!data) {
-    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucun bulletin DSN pour ' + annee + '</div>';
+  if (!data || data.total_bulletins === 0) {
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucun bulletin pour '+annee+'</div>';
     return;
   }
-  const emps = data.employes||[]; let tB=0,tN=0,tP=0;
-  const rows = emps.map(e => {
-    const brut = parseFloat(e.salaire_brut)||0;
-    const ni = parseFloat(e.net_imposable)||parseFloat(e.net_a_payer)||0;
-    const pas = parseFloat(e.retenue_pas)||0;
-    tB+=brut; tN+=ni; tP+=pas;
-    const nom = e.employe || `${e.prenom||''} ${e.nom||''}`.trim() || 'Employé';
-    return `<tr><td><strong>${nom}</strong>${e.poste?'<div style="font-size:11px;color:var(--t2)">'+e.poste+'</div>':''}</td><td class="tr">${fmtEur(brut)}</td><td class="tr">${fmtEur(ni)}</td><td class="tr neg">${fmtEur(pas)}</td><td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`;
-  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucun bulletin</td></tr>';
+
   const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  c.innerHTML = `<div class="mg mg3">
-    <div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">${fmtEur(tB)}</div></div>
-    <div class="mc"><div class="ml">PAS total</div><div class="mv neg">${fmtEur(tP)}</div></div>
-    <div class="mc"><div class="ml">Employés</div><div class="mv" style="color:var(--b)">${emps.length}</div></div></div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">DSN — ${moisNoms[moisTrouve]} ${annee}</div>
-    <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead><tbody>${rows}${emps.length?`<tr class="subr"><td><strong>TOTAL ${emps.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tB)}</strong></td><td class="tr"><strong>${fmtEur(tN)}</strong></td><td class="tr neg"><strong>${fmtEur(tP)}</strong></td><td></td></tr>`:''}</tbody></table></div>`;
+  const dernierMois = data.dernier_mois;
+  const emps = data.par_mois[dernierMois] || [];
+
+  let tB=0,tN=0,tP=0;
+  const rows = emps.map(e => {
+    tB+=e.salaire_brut; tN+=e.net_imposable; tP+=e.retenue_pas;
+    return `<tr><td><strong>${e.employe_nom}</strong>${e.poste?'<div style="font-size:11px;color:var(--t2)">'+e.poste+'</div>':''}</td><td class="tr">${fmtEur(e.salaire_brut)}</td><td class="tr">${fmtEur(e.net_imposable)}</td><td class="tr neg">${fmtEur(e.retenue_pas)}</td><td>${e.dsn_transmis?'<span class="tag tg">Transmis</span>':'<span class="tag tw2">À transmettre</span>'}</td></tr>`;
+  }).join('');
+
+  // Historique DSN sur l'année
+  const histRows = data.mois_avec_donnees.map(m => {
+    const bulls = data.par_mois[m];
+    const mBrut = bulls.reduce((s,b)=>s+b.salaire_brut,0);
+    const mPas = bulls.reduce((s,b)=>s+b.retenue_pas,0);
+    const transmis = bulls.every(b => b.dsn_transmis);
+    const isCurrent = m === dernierMois;
+    return `<tr ${isCurrent?'style="background:var(--bb)"':''}><td><strong>${moisNoms[m]} ${annee}</strong>${isCurrent?' <span class="tag tb2">Courant</span>':''}</td><td class="tr">${fmtEur(mBrut)}</td><td class="tr neg">${fmtEur(mPas)}</td><td>${transmis?'<span class="tag tg">✓ Transmis</span>':'<span class="tag tw2">⚠ À transmettre</span>'}</td></tr>`;
+  }).join('');
+
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Masse salariale ${moisNoms[dernierMois]}</div><div class="mv">${fmtEur(tB)}</div></div>
+      <div class="mc"><div class="ml">PAS total ${moisNoms[dernierMois]}</div><div class="mv neg">${fmtEur(tP)}</div></div>
+      <div class="mc"><div class="ml">Employés</div><div class="mv" style="color:var(--b)">${emps.length}</div></div>
+      <div class="mc"><div class="ml">DSN transmises</div><div class="mv pos">${data.mois_avec_donnees.filter(m=>data.par_mois[m].every(b=>b.dsn_transmis)).length}/${data.mois_avec_donnees.length}</div></div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">DSN — Détail ${moisNoms[dernierMois]} ${annee}</div>
+      <table>
+        <thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead>
+        <tbody>${rows}<tr class="subr" style="background:var(--bb)"><td><strong>TOTAL ${emps.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tB)}</strong></td><td class="tr"><strong>${fmtEur(tN)}</strong></td><td class="tr neg"><strong>${fmtEur(tP)}</strong></td><td></td></tr></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Historique DSN ${annee}</div>
+      <table>
+        <thead><tr><th>Mois</th><th class="tr">Masse salariale</th><th class="tr">PAS</th><th>Statut</th></tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>
+    </div>`;
 }
 
 // ── RAS (Retenue à la source) ──
 async function loadRAS() {
   const annee = window._exercice || new Date().getFullYear();
-  // Trouver le dernier mois avec données
-  let data = null, moisTrouve = 0;
-  for (let m = 12; m >= 1; m--) {
-    const r = await api.get('/api/declarations/ras?annee='+annee+'&mois='+m);
-    if (r && r.employes && r.employes.detail && r.employes.detail.length > 0) {
-      data = r; moisTrouve = m; break;
-    }
-  }
+  // Utiliser l'endpoint annuel pour trouver le dernier mois
+  const annualData = await api.get('/api/paie/bulletins/annee/'+annee);
   const c = document.querySelector('#p-ras .content');
   if (!c) return;
+  if (!annualData || annualData.total_bulletins === 0) {
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucune donnée RAS pour '+annee+'</div>';
+    return;
+  }
+  const moisTrouve = annualData.dernier_mois;
+  // Charger le détail RAS (avec fournisseurs) pour ce mois
+  const data = await api.get('/api/declarations/ras?annee='+annee+'&mois='+moisTrouve);
   if (!data) {
-    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucune donnée RAS pour ' + annee + '</div>';
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Erreur de chargement</div>';
     return;
   }
 
@@ -3532,32 +3555,44 @@ window.showBudgetMois = async function(mois) {
 // ── Journal de paie ──
 async function loadJournalPaie() {
   const annee = window._exercice || new Date().getFullYear();
-  let data = null, moisTrouve = 0;
-  for (let m = 12; m >= 1; m--) {
-    const r = await api.get('/api/paie/bulletins/'+annee+'/'+m);
-    if (r && r.bulletins && r.bulletins.length > 0) { data = r; moisTrouve = m; break; }
-  }
+  const data = await api.get('/api/paie/bulletins/annee/'+annee);
   const c = document.querySelector('#p-journal-paie .content');
   if (!c) return;
-  if (!data) {
-    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucun bulletin de paie pour ' + annee + '</div>';
+  if (!data || data.total_bulletins === 0) {
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucun bulletin de paie pour '+annee+'</div>';
     return;
   }
-  const bulletins = data.bulletins||[]; let tB=0,tCS=0,tCP=0,tN=0;
-  const rows = bulletins.map(b => {
-    const brut = parseFloat(b.salaire_brut)||0;
-    const cs = parseFloat(b.cotis_salariales)||0;
-    const cp = parseFloat(b.cotis_patronales)||0;
-    const net = parseFloat(b.net_a_payer)||0;
-    tB+=brut; tCS+=cs; tCP+=cp; tN+=net;
-    return `<tr><td><strong>${b.employe_nom||'Employé #'+b.employe_id}</strong></td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(cs)}</td><td class="tr neg">${fmtEur(cp)}</td><td class="tr pos">${fmtEur(net)}</td></tr>`;
-  }).join('')||'<tr><td colspan="5" style="color:var(--t3);text-align:center">Aucun bulletin</td></tr>';
+
   const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  c.innerHTML = `<div class="mg mg3"><div class="mc"><div class="ml">Masse salariale brute</div><div class="mv">${fmtEur(tB)}</div></div>
-    <div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">${fmtEur(tCP)}</div></div>
-    <div class="mc"><div class="ml">Coût total employeur</div><div class="mv">${fmtEur(tB+tCP)}</div></div></div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">Journal de paie — ${moisNoms[moisTrouve]} ${annee}</div>
-    <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Cotis. sal.</th><th class="tr">Cotis. pat.</th><th class="tr">Net payé</th></tr></thead><tbody>${rows}${bulletins.length?`<tr class="subr"><td><strong>TOTAL ${bulletins.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tB)}</strong></td><td class="tr neg"><strong>${fmtEur(tCS)}</strong></td><td class="tr neg"><strong>${fmtEur(tCP)}</strong></td><td class="tr pos"><strong>${fmtEur(tN)}</strong></td></tr>`:''}</tbody></table></div>`;
+  const dernierMois = data.dernier_mois;
+  const bulletins = data.par_mois[dernierMois] || [];
+
+  let tB=0,tCS=0,tCP=0,tN=0;
+  const rows = bulletins.map(b => {
+    tB+=b.salaire_brut; tCS+=b.cotis_salariales; tCP+=b.cotis_patronales; tN+=b.net_a_payer;
+    return `<tr><td><strong>${b.employe_nom}</strong></td><td class="tr">${fmtEur(b.salaire_brut)}</td><td class="tr neg">${fmtEur(b.cotis_salariales)}</td><td class="tr neg">${fmtEur(b.cotis_patronales)}</td><td class="tr">${fmtEur(b.net_imposable)}</td><td class="tr neg">${fmtEur(b.retenue_pas)}</td><td class="tr pos">${fmtEur(b.net_a_payer)}</td></tr>`;
+  }).join('');
+
+  // Total annuel
+  let yB=0,yCS=0,yCP=0,yN=0;
+  Object.values(data.par_mois).forEach(mois => {
+    mois.forEach(b => { yB += b.salaire_brut; yCS += b.cotis_salariales; yCP += b.cotis_patronales; yN += b.net_a_payer; });
+  });
+
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Masse salariale ${moisNoms[dernierMois]}</div><div class="mv">${fmtEur(tB)}</div></div>
+      <div class="mc"><div class="ml">Charges patronales</div><div class="mv neg">${fmtEur(tCP)}</div></div>
+      <div class="mc"><div class="ml">Coût employeur</div><div class="mv" style="color:var(--p)">${fmtEur(tB+tCP)}</div></div>
+      <div class="mc"><div class="ml">Masse salariale YTD</div><div class="mv">${fmtEur(yB)}</div><div class="mt">${data.mois_avec_donnees.length} mois</div></div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Journal de paie — ${moisNoms[dernierMois]} ${annee}</div>
+      <table>
+        <thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Cotis. sal.</th><th class="tr">Cotis. pat.</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th class="tr">Net payé</th></tr></thead>
+        <tbody>${rows}<tr class="subr" style="background:var(--bb)"><td><strong>TOTAL ${bulletins.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tB)}</strong></td><td class="tr neg"><strong>${fmtEur(tCS)}</strong></td><td class="tr neg"><strong>${fmtEur(tCP)}</strong></td><td class="tr"><strong>${fmtEur(bulletins.reduce((s,b)=>s+b.net_imposable,0))}</strong></td><td class="tr neg"><strong>${fmtEur(bulletins.reduce((s,b)=>s+b.retenue_pas,0))}</strong></td><td class="tr pos"><strong>${fmtEur(tN)}</strong></td></tr></tbody>
+      </table>
+    </div>`;
 }
 
 // ── Judiciaire ──

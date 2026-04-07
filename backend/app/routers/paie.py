@@ -147,6 +147,47 @@ def valider_bulletin(data: BulletinRequest, current_user=Depends(get_current_use
     return bulletin
 
 
+@router.get("/bulletins/annee/{annee}")
+def bulletins_annee(annee: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Retourne tous les bulletins de l'année groupés par mois avec détails + employes."""
+    bulletins = db.query(BulletinPaie).filter(
+        BulletinPaie.entreprise_id == current_user.entreprise_id,
+        BulletinPaie.annee == annee,
+    ).order_by(BulletinPaie.mois).all()
+
+    emp_ids = list(set(b.employe_id for b in bulletins))
+    emps = {e.id: e for e in db.query(Employe).filter(Employe.id.in_(emp_ids)).all()} if emp_ids else {}
+
+    par_mois = {}
+    for b in bulletins:
+        if b.mois not in par_mois:
+            par_mois[b.mois] = []
+        par_mois[b.mois].append({
+            "id": b.id,
+            "employe_id": b.employe_id,
+            "employe_nom": f"{emps[b.employe_id].prenom} {emps[b.employe_id].nom}" if b.employe_id in emps else "",
+            "poste": emps[b.employe_id].poste if b.employe_id in emps else "",
+            "taux_pas": float(emps[b.employe_id].taux_pas or 0) if b.employe_id in emps else 0,
+            "salaire_brut": float(b.salaire_brut or 0),
+            "cotis_salariales": float(b.cotis_salariales or 0),
+            "cotis_patronales": float(b.cotis_patronales or 0),
+            "net_imposable": float(b.net_imposable or 0),
+            "retenue_pas": float(b.retenue_pas or 0),
+            "net_a_payer": float(b.net_a_payer or 0),
+            "cout_employeur": float(b.cout_employeur or 0),
+            "dsn_transmis": b.dsn_transmis,
+        })
+
+    dernier_mois = max(par_mois.keys()) if par_mois else 0
+    return {
+        "annee": annee,
+        "dernier_mois": dernier_mois,
+        "mois_avec_donnees": sorted(par_mois.keys()),
+        "par_mois": par_mois,
+        "total_bulletins": len(bulletins),
+    }
+
+
 @router.get("/bulletins/{annee}/{mois}")
 def bulletins_du_mois(annee: int, mois: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Résumé DSN-ready de tous les bulletins d'un mois avec details."""
