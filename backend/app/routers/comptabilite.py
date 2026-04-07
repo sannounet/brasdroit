@@ -610,6 +610,146 @@ def ratios(
 
 # ─── LETTRAGE ───
 
+class LettrageIn(_BM):
+    mouvement_id: int
+    ecriture_id: int
+    lettre: Optional[str] = None  # Auto-générée si non fournie
+
+
+@router.post("/lettrage/match")
+def lettrage_match(
+    data: LettrageIn,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lettrer manuellement un mouvement bancaire avec une écriture."""
+    eid = current_user.entreprise_id
+
+    mvt = db.query(MouvementBancaire).filter(
+        MouvementBancaire.id == data.mouvement_id,
+        MouvementBancaire.entreprise_id == eid,
+    ).first()
+    if not mvt:
+        raise HTTPException(404, "Mouvement bancaire introuvable")
+
+    ecr = db.query(Ecriture).filter(
+        Ecriture.id == data.ecriture_id,
+        Ecriture.entreprise_id == eid,
+    ).first()
+    if not ecr:
+        raise HTTPException(404, "Écriture introuvable")
+
+    # Générer une lettre si non fournie (A, B, C... AA, AB...)
+    lettre = data.lettre
+    if not lettre:
+        from string import ascii_uppercase
+        used = set()
+        for m in db.query(MouvementBancaire).filter(MouvementBancaire.entreprise_id == eid, MouvementBancaire.lettre.isnot(None)).all():
+            if m.lettre: used.add(m.lettre)
+        for letter in ascii_uppercase:
+            if letter not in used:
+                lettre = letter
+                break
+        if not lettre:
+            # Combinaisons à 2 lettres
+            for a in ascii_uppercase:
+                for b in ascii_uppercase:
+                    combo = a + b
+                    if combo not in used:
+                        lettre = combo
+                        break
+                if lettre: break
+
+    mvt.lettre = lettre
+    mvt.is_lettree = True
+    ecr.lettre = lettre
+    ecr.is_lettree = True
+    db.commit()
+
+    return {"status": "ok", "lettre": lettre, "mouvement_id": mvt.id, "ecriture_id": ecr.id}
+
+
+@router.delete("/lettrage/{lettre}")
+def lettrage_delettre(
+    lettre: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Délettrer (supprimer un lettrage) sur tous les mouvements/écritures d'une lettre."""
+    eid = current_user.entreprise_id
+    nb = 0
+    for m in db.query(MouvementBancaire).filter(MouvementBancaire.entreprise_id == eid, MouvementBancaire.lettre == lettre).all():
+        m.lettre = None
+        m.is_lettree = False
+        nb += 1
+    for e in db.query(Ecriture).filter(Ecriture.entreprise_id == eid, Ecriture.lettre == lettre).all():
+        e.lettre = None
+        e.is_lettree = False
+        nb += 1
+    db.commit()
+    return {"status": "ok", "nb_delettres": nb}
+
+
+@router.post("/lettrage/auto")
+def lettrage_auto(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Lettrage automatique : matche les mouvements et écritures par date et montant."""
+    eid = current_user.entreprise_id
+
+    mouvements = db.query(MouvementBancaire).filter(
+        MouvementBancaire.entreprise_id == eid,
+        MouvementBancaire.is_lettree == False,
+    ).all()
+    ecritures = db.query(Ecriture).filter(
+        Ecriture.entreprise_id == eid,
+        Ecriture.is_lettree == False,
+    ).all()
+
+    from string import ascii_uppercase
+    used = set()
+    for m in db.query(MouvementBancaire).filter(MouvementBancaire.entreprise_id == eid, MouvementBancaire.lettre.isnot(None)).all():
+        if m.lettre: used.add(m.lettre)
+
+    def next_letter():
+        for letter in ascii_uppercase:
+            if letter not in used:
+                used.add(letter)
+                return letter
+        for a in ascii_uppercase:
+            for b in ascii_uppercase:
+                combo = a + b
+                if combo not in used:
+                    used.add(combo)
+                    return combo
+        return None
+
+    nb_matches = 0
+    matched_ecr_ids = set()
+    for mvt in mouvements:
+        for ecr in ecritures:
+            if ecr.id in matched_ecr_ids:
+                continue
+            # Match si même date et même montant absolu
+            if (mvt.date_operation == ecr.date_ecriture and
+                abs(float(mvt.montant) - float(ecr.montant)) < 0.01 and
+                abs(float(mvt.montant)) > 0):
+                lettre = next_letter()
+                if not lettre:
+                    break
+                mvt.lettre = lettre
+                mvt.is_lettree = True
+                ecr.lettre = lettre
+                ecr.is_lettree = True
+                matched_ecr_ids.add(ecr.id)
+                nb_matches += 1
+                break
+
+    db.commit()
+    return {"status": "ok", "nb_matches": nb_matches}
+
+
 @router.get("/lettrage")
 def lettrage(
     current_user=Depends(get_current_user),
