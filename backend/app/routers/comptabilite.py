@@ -597,8 +597,15 @@ Paragraphe 3 — Ce que vous devriez faire maintenant (3 conseils concrets et si
 Réponds uniquement avec le texte, sans introduction ni formules de politesse."""
         try:
             result["analyse_ia"] = question_ia(prompt, contexte)
+            # Detection d'erreur retournée par le service
+            if "credit balance is too low" in result["analyse_ia"].lower():
+                result["analyse_ia"] = "⚠ Le crédit Anthropic est épuisé. L'administrateur doit recharger le compte sur console.anthropic.com pour activer l'analyse IA."
         except Exception as e:
-            result["analyse_ia"] = f"Erreur lors de l'analyse: {str(e)}"
+            err = str(e)
+            if "credit balance" in err.lower():
+                result["analyse_ia"] = "⚠ Le crédit Anthropic est épuisé. L'administrateur doit recharger le compte sur console.anthropic.com pour activer l'analyse IA."
+            else:
+                result["analyse_ia"] = f"Erreur lors de l'analyse : {err[:200]}"
 
     return result
 
