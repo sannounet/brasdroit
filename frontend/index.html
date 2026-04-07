@@ -3132,11 +3132,59 @@ async function loadJudiciaire() {
 }
 
 // ── Liasse fiscale ──
+function getLiasseOverrides(annee) {
+  try { return JSON.parse(localStorage.getItem('bd_liasse_'+annee) || '{}'); } catch(e) { return {}; }
+}
+function saveLiasseOverrides(annee, overrides) {
+  localStorage.setItem('bd_liasse_'+annee, JSON.stringify(overrides));
+}
+window._currentLiasseAnnee = null;
+
+window.editLiasse = function(code) {
+  const annee = window._currentLiasseAnnee;
+  const cell = document.getElementById('lf-'+code);
+  if (!cell) return;
+  const current = parseFloat(cell.dataset.value || '0');
+  const v = prompt('Nouvelle valeur pour ' + code + ' (€) :', current);
+  if (v === null) return;
+  const n = parseFloat(v.replace(/\s/g,'').replace(',','.'));
+  if (isNaN(n)) { showToast('Montant invalide','error'); return; }
+  const overrides = getLiasseOverrides(annee);
+  overrides[code] = n;
+  saveLiasseOverrides(annee, overrides);
+  showToast('Valeur sauvegardée ✓','success');
+  loadLiasse();
+};
+
+window.resetLiasseOverrides = function() {
+  if (!confirm('Supprimer toutes les modifications manuelles ?')) return;
+  localStorage.removeItem('bd_liasse_'+window._currentLiasseAnnee);
+  showToast('Modifications supprimées','success');
+  loadLiasse();
+};
+
+window.addLiasseLine = function() {
+  const code = prompt('Code CERFA (ex: ZA, ZB, etc.):');
+  if (!code) return;
+  const libelle = prompt('Libellé:');
+  if (!libelle) return;
+  const v = prompt('Montant (€):');
+  const n = parseFloat((v||'0').replace(/\s/g,'').replace(',','.'));
+  if (isNaN(n)) { showToast('Montant invalide','error'); return; }
+  const overrides = getLiasseOverrides(window._currentLiasseAnnee);
+  overrides['_custom_'+code+'_'+libelle.replace(/\W/g,'_')] = n;
+  saveLiasseOverrides(window._currentLiasseAnnee, overrides);
+  showToast('Ligne ajoutée ✓','success');
+  loadLiasse();
+};
+
 async function loadLiasse() {
   const annee = window._exercice || new Date().getFullYear();
+  window._currentLiasseAnnee = annee;
   const data = await api.get('/api/compta/liasse?annee='+annee);
   const c = document.querySelector('#p-liasse .content');
   if (!c||!data) return;
+  const overrides = getLiasseOverrides(annee);
 
   // Libellés officiels CERFA
   const libelles = {
@@ -3167,29 +3215,56 @@ async function loadLiasse() {
   };
 
   const makeRows = (obj, opts = {}) => {
-    return Object.entries(obj||{}).map(([code, montant]) => {
+    return Object.entries(obj||{}).map(([code, autoMontant]) => {
       const cleanCode = code.split('_')[0];
       const libelle = libelles[code] || code.replace(/_/g, ' ');
       const isTotal = code.startsWith('CO_') || code.startsWith('EE_') || code.startsWith('GG_') || code.startsWith('GR_') || code.startsWith('HD_') || code.startsWith('HN_');
+      const isOverridden = overrides[code] !== undefined;
+      const montant = isOverridden ? overrides[code] : autoMontant;
       const valueColor = opts.colored ? (montant >= 0 ? 'var(--g)' : 'var(--r)') : 'var(--t)';
+      const badge = isOverridden ? '<span style="font-size:9px;background:var(--a);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">Manuel</span>' : '';
       return `<tr ${isTotal?'style="background:var(--bb);font-weight:700"':''}>
         <td class="mono" style="color:var(--t2)">${cleanCode}</td>
-        <td>${libelle}</td>
-        <td class="tr" style="color:${valueColor};font-family:monospace">${fmtEur(montant)}</td>
+        <td>${libelle}${badge}</td>
+        <td class="tr" id="lf-${code}" data-value="${montant}" style="color:${valueColor};font-family:monospace">${fmtEur(montant)}</td>
+        <td><button class="btn btn-sm" onclick="editLiasse('${code}')" title="Modifier">✏</button></td>
       </tr>`;
     }).join('');
   };
 
-  const actif = data.cerfa_2050_actif || data.actif_2050 || {};
-  const passif = data.cerfa_2051_passif || data.passif_2051 || {};
-  const resultat = data.cerfa_2052_resultat || data.resultat_2052 || {};
+  const actif = Object.assign({}, data.cerfa_2050_actif || data.actif_2050 || {});
+  const passif = Object.assign({}, data.cerfa_2051_passif || data.passif_2051 || {});
+  const resultat = Object.assign({}, data.cerfa_2052_resultat || data.resultat_2052 || {});
+
+  // Appliquer les overrides aux totaux automatiquement
+  Object.keys(overrides).forEach(k => {
+    if (k in actif) actif[k] = overrides[k];
+    if (k in passif) passif[k] = overrides[k];
+    if (k in resultat) resultat[k] = overrides[k];
+  });
 
   const totalActif = actif.CO_total_actif || 0;
   const totalPassif = passif.EE_total_passif || 0;
   const resultatNet = resultat.HN_resultat_net || 0;
+  const nbOverrides = Object.keys(overrides).length;
+
+  // Lignes personnalisées (ajoutées manuellement)
+  const customLines = Object.entries(overrides).filter(([k]) => k.startsWith('_custom_'));
+  const customRows = customLines.map(([k, montant]) => {
+    const parts = k.replace('_custom_','').split('_');
+    const code = parts[0];
+    const libelle = parts.slice(1).join(' ').replace(/_/g,' ');
+    return `<tr style="background:#FFFBEB"><td class="mono" style="color:var(--at)">${code}</td><td>${libelle} <span style="font-size:9px;background:var(--a);color:#fff;padding:1px 5px;border-radius:3px">Personnalisé</span></td><td class="tr" style="font-family:monospace">${fmtEur(montant)}</td><td><button class="btn btn-sm btn-d" onclick="(function(){const o=getLiasseOverrides(${annee});delete o['${k}'];saveLiasseOverrides(${annee},o);loadLiasse();})()">×</button></td></tr>`;
+  }).join('');
 
   c.innerHTML = `
-    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">Liasse fiscale auto-remplie — Exercice ${annee}</div><div class="fdesc">Données calculées automatiquement à partir de votre comptabilité (PCG)</div></div></div>
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">Liasse fiscale — Exercice ${annee} ${nbOverrides>0?'<span class="tag tw2">'+nbOverrides+' modification(s) manuelle(s)</span>':''}</div><div class="fdesc">Cliquez sur ✏ pour modifier une valeur. Les modifications sont sauvegardées localement.</div></div></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="addLiasseLine()">+ Ajouter une ligne personnalisée</button>
+      ${nbOverrides>0?'<button class="btn btn-d" onclick="resetLiasseOverrides()">↻ Réinitialiser les modifications</button>':''}
+      <button class="btn" onclick="exportPage('liasse')">📄 Export Cerfa</button>
+    </div>
 
     <div class="mg mg3">
       <div class="mc"><div class="ml">Total Actif</div><div class="mv" style="color:var(--b)">${fmtEur(totalActif)}</div></div>
@@ -3201,14 +3276,14 @@ async function loadLiasse() {
       <div class="card">
         <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2050 — Bilan Actif</div>
         <table>
-          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant net</th></tr></thead>
+          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant net</th><th></th></tr></thead>
           <tbody>${makeRows(actif)}</tbody>
         </table>
       </div>
       <div class="card">
         <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2051 — Bilan Passif</div>
         <table>
-          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th></tr></thead>
+          <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th><th></th></tr></thead>
           <tbody>${makeRows(passif)}</tbody>
         </table>
       </div>
@@ -3217,16 +3292,25 @@ async function loadLiasse() {
     <div class="card">
       <div class="ct" style="margin-bottom:.75rem">📋 Cerfa 2052 — Compte de résultat</div>
       <table>
-        <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th></tr></thead>
+        <thead><tr><th>Code</th><th>Poste</th><th class="tr">Montant</th><th></th></tr></thead>
         <tbody>${makeRows(resultat, {colored: true})}</tbody>
       </table>
     </div>
 
+    ${customLines.length > 0 ? `
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">📝 Lignes personnalisées</div>
+      <table>
+        <thead><tr><th>Code</th><th>Libellé</th><th class="tr">Montant</th><th></th></tr></thead>
+        <tbody>${customRows}</tbody>
+      </table>
+    </div>` : ''}
+
     <div class="card" style="background:linear-gradient(135deg,#EFF6FF,#FFFFFF);text-align:center;padding:1.5rem">
       <div style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:1rem">
         <div><div class="ml">Bilan équilibré ?</div><div style="font-size:18px;font-weight:700;color:${Math.abs(totalActif-totalPassif)<1?'var(--g)':'var(--r)'}">${Math.abs(totalActif-totalPassif)<1?'✓ Équilibré':'⚠ Écart '+fmtEur(totalActif-totalPassif)}</div></div>
+        <div><div class="ml">Modifications</div><div style="font-size:18px;font-weight:700;color:${nbOverrides>0?'var(--a)':'var(--g)'}">${nbOverrides>0?nbOverrides+' manuelle(s)':'Aucune'}</div></div>
         <div><div class="ml">Statut</div><div style="font-size:18px;font-weight:700;color:var(--a)">📝 Brouillon</div></div>
-        <div><button class="btn btn-p" onclick="exportPage('liasse')">📄 Export Cerfa</button></div>
       </div>
     </div>`;
 }
