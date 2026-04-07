@@ -1,7 +1,7 @@
 """
 Routes API — Comptabilite (ecritures, bilan, resultat, ratios, lettrage, liasse, ecarts, optimisation)
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 from typing import Optional, List
@@ -169,6 +169,83 @@ def bilan(
         "total_actif": sum(actif_par_classe.values()),
         "total_passif": sum(passif_par_classe.values()),
     }
+
+
+@router.post("/ocr")
+async def ocr_facture(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+):
+    """Analyse OCR d'une facture (image ou PDF) via Claude Vision."""
+    import base64
+    from app.services.ia_service import get_client
+    import json
+
+    # Lire le fichier
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:  # 10MB max
+        raise HTTPException(400, "Fichier trop volumineux (max 10 Mo)")
+
+    media_type = file.content_type or "image/jpeg"
+    if not (media_type.startswith("image/") or media_type == "application/pdf"):
+        raise HTTPException(400, f"Type de fichier non supporté: {media_type}")
+
+    # Si PDF, on ne peut pas envoyer directement à Claude Vision (qui prend des images)
+    # Pour simplifier, on traite uniquement les images. Le PDF nécessiterait une lib de conversion.
+    if media_type == "application/pdf":
+        raise HTTPException(400, "Pour le moment, seules les images (JPG, PNG) sont supportées. Convertissez votre PDF en image.")
+
+    image_b64 = base64.standard_b64encode(content).decode("utf-8")
+
+    client = get_client()
+    if not client:
+        raise HTTPException(503, "Service IA non configuré")
+
+    prompt = """Analyse cette facture et extrais les informations en JSON strict (pas de markdown, pas de texte).
+Format attendu:
+{
+  "fournisseur": "Nom",
+  "siret": "siret si visible",
+  "numero_facture": "F-2026-001",
+  "date_facture": "2026-04-03",
+  "date_echeance": "2026-05-03",
+  "montant_ht": 1000.00,
+  "tva": 200.00,
+  "taux_tva": 20.0,
+  "montant_ttc": 1200.00,
+  "objet": "Description courte",
+  "categorie_suggeree": "Achats|Services exterieurs|Personnel|Loyer|Investissement",
+  "compte_suggere": "604000"
+}
+Si une info manque, mets null. Réponds UNIQUEMENT avec le JSON."""
+
+    try:
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
+                    {"type": "text", "text": prompt}
+                ]
+            }]
+        )
+        text = message.content[0].text.strip()
+        # Nettoyer le JSON si Claude met des ```json
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        result = json.loads(text.strip())
+        return {"status": "ok", "data": result}
+    except json.JSONDecodeError as e:
+        return {"status": "error", "detail": "Format de réponse IA invalide", "raw": text}
+    except Exception as e:
+        err = str(e)
+        if "credit balance" in err.lower():
+            raise HTTPException(503, "Crédit Anthropic épuisé. Rechargez sur console.anthropic.com")
+        raise HTTPException(500, f"Erreur OCR: {err[:200]}")
 
 
 @router.get("/ecritures/compte/{numero}")

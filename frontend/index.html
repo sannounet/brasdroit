@@ -441,54 +441,43 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- OCR -->
 <div id="p-ocr" class="panel">
-<div class="topbar"><div class="pt">Saisie comptable &mdash; OCR IA</div></div>
+<div class="topbar"><div class="pt">Saisie comptable — OCR IA Claude Vision</div></div>
 <div class="content">
+<div class="fi" style="margin-bottom:1rem"><div class="fic">📸</div><div class="fb"><div class="ftt">Importez une facture pour extraction automatique des données</div><div class="fdesc">Claude Vision analyse l'image et extrait fournisseur, montants, dates, TVA, etc. Formats supportés : JPG, PNG (max 10 Mo).</div></div></div>
+
 <div class="g2">
-<div>
-<div class="card"><div class="ct" style="margin-bottom:.75rem">1. Importer une facture</div>
-<div class="upz" id="upz" onclick="doOCR()"><div style="font-size:32px;margin-bottom:8px">&#128247;</div>
-<div style="font-size:13px;color:var(--t2);margin-bottom:12px">Cliquez pour importer &middot; Photo, scan, PDF acceptes</div>
-<button class="btn btn-p">Analyser par IA &rarr;</button></div>
-<div id="ocr-loading" style="display:none;text-align:center;padding:1.5rem;color:var(--t2)"><div style="font-size:24px;margin-bottom:8px">&#9203;</div>Analyse OCR en cours...</div>
-</div>
-<div class="card" id="ocr-result" style="display:none">
-<div class="ct" style="margin-bottom:.75rem">2. Donnees extraites <span class="ai">&#10022; IA</span></div>
-<div class="ocrf"><span class="ocrk">Fournisseur</span><span class="ocrv">Legrand SAS</span></div>
-<div class="ocrf"><span class="ocrk">N&deg; facture</span><span class="ocrv">F2026-0314</span></div>
-<div class="ocrf"><span class="ocrk">Date</span><span class="ocrv">28/03/2026</span></div>
-<div class="ocrf"><span class="ocrk">Montant HT</span><span class="ocrv">2 041,67 &euro;</span></div>
-<div class="ocrf"><span class="ocrk">TVA 20%</span><span class="ocrv">408,33 &euro;</span></div>
-<div class="ocrf"><span class="ocrk">Total TTC</span><span class="ocrv" style="font-size:15px;color:var(--bt)">2 450,00 &euro;</span></div>
-<div class="ocrf"><span class="ocrk">Echeance</span><span class="ocrv">05/04/2026</span></div>
-<div class="fw" style="margin-top:8px"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">SIREN fournisseur non lisible &mdash; TVA a risque</div><div class="fdesc">Demander facture rectificative avant deduction (408,33 &euro;)</div></div></div>
-<button class="btn btn-p" style="width:100%;margin-top:.5rem" onclick="doEcriture()">Generer l'ecriture comptable &rarr;</button>
-</div>
-</div>
-<div>
-<div class="card" id="ecriture-card" style="display:none">
-<div class="ct" style="margin-bottom:.75rem">3. Ecriture generee <span class="ai">&#10022; Auto</span></div>
-<div style="background:var(--s4);border-radius:var(--rad);padding:.75rem;font-family:monospace;font-size:12px">
-<div class="er"><span>215400</span><span>Materiel Legrand SAS</span><span class="pos">2 041,67</span><span>&mdash;</span></div>
-<div class="er"><span>445660</span><span>TVA deductible 20%</span><span class="pos">408,33</span><span>&mdash;</span></div>
-<div class="er"><span>401000</span><span>Fournisseur Legrand SAS</span><span>&mdash;</span><span class="neg">2 450,00</span></div>
-<div class="er" style="font-weight:700;border-top:1px solid var(--s4)"><span></span><span>TOTAL</span><span class="pos">2 450,00</span><span class="neg">2 450,00</span></div>
-</div>
-<div class="fd" style="margin-top:8px"><div class="fic">&#9888;</div><div class="fb"><div class="ftt">607100 &rarr; 215400 corrige auto &mdash; immobilisation &gt;500&euro;</div><div class="fdesc">Amortissement lineaire 3 ans &middot; Dotation: 56,72&euro;/mois</div></div></div>
-<div style="display:flex;gap:6px;margin-top:.5rem">
-<button class="btn btn-s" onclick="doLettrage()">&#10003; Valider et lettrer</button>
-<button class="btn">Modifier</button>
-</div>
-<div class="fs" style="margin-top:8px;display:none" id="lettrage-ok">&#10003; Lettrage bancaire effectue &mdash; rapprochement virement 05/04</div>
-</div>
-<div class="card"><div class="ct" style="margin-bottom:.6rem">Dernieres ecritures saisies</div>
-<table><thead><tr><th>Date</th><th>Compte</th><th>Libelle</th><th class="tr">Debit</th><th class="tr">Credit</th><th>IA</th></tr></thead>
-<tbody>
-<tr><td>31/03</td><td class="mono">641100</td><td>Salaires mars</td><td class="tr neg">12 400</td><td class="tr">&mdash;</td><td><span class="tag tg">OK</span></td></tr>
-<tr><td>28/03</td><td class="mono">606100</td><td>EDF Pro</td><td class="tr neg">340</td><td class="tr">&mdash;</td><td><span class="tag tg">OK</span></td></tr>
-<tr style="background:var(--rb)"><td>28/03</td><td class="mono" style="color:var(--rt)">607100</td><td>Legrand (a corriger)</td><td class="tr neg">2 042</td><td class="tr">&mdash;</td><td><span class="tag tr2">&#9888;</span></td></tr>
-</tbody></table>
-</div>
-</div>
+  <div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">1. Importer la facture</div>
+      <input type="file" id="ocr-file" accept="image/*" style="display:none" onchange="ocrUpload(this)">
+      <div class="upz" id="upz" onclick="document.getElementById('ocr-file').click()" style="cursor:pointer;border:2px dashed var(--s4);border-radius:var(--rad2);padding:2rem;text-align:center;transition:all .15s">
+        <div style="font-size:48px;margin-bottom:8px">📸</div>
+        <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Cliquez ou glissez une image ici<br><span style="font-size:11px">JPG, PNG · Max 10 Mo</span></div>
+        <button class="btn btn-p" type="button">Choisir un fichier</button>
+      </div>
+      <div id="ocr-loading" style="display:none;text-align:center;padding:1.5rem;color:var(--t2)">
+        <div style="font-size:32px;margin-bottom:8px">⏳</div>
+        <div>Claude analyse votre facture...</div>
+      </div>
+      <div id="ocr-preview" style="display:none;margin-top:1rem;text-align:center">
+        <img id="ocr-image" style="max-width:100%;max-height:400px;border:1px solid var(--s4);border-radius:var(--rad)">
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" id="ocr-result" style="display:none">
+      <div class="ct" style="margin-bottom:.75rem">2. Données extraites <span class="ai">✦ Claude IA</span></div>
+      <div id="ocr-fields"></div>
+      <button class="btn btn-p" style="width:100%;margin-top:1rem" onclick="creerEcritureFromOCR()">→ Créer l'écriture comptable</button>
+    </div>
+    <div class="card" id="ocr-empty">
+      <div style="text-align:center;padding:2rem;color:var(--t3)">
+        <div style="font-size:32px;margin-bottom:8px">📋</div>
+        <div>Les données extraites apparaîtront ici</div>
+      </div>
+    </div>
+  </div>
 </div>
 </div>
 </div>
@@ -2641,6 +2630,119 @@ function exportPage(id) {
   w.document.close();
   setTimeout(()=>w.print(), 300);
 }
+
+// ── OCR Facture ──
+window._ocrData = null;
+
+window.ocrUpload = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { showToast('Fichier trop volumineux (max 10 Mo)', 'error'); return; }
+
+  // Aperçu
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById('ocr-image');
+    if (img) { img.src = e.target.result; document.getElementById('ocr-preview').style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+
+  // Cacher l'upload zone, afficher loading
+  document.getElementById('upz').style.display = 'none';
+  document.getElementById('ocr-loading').style.display = 'block';
+  document.getElementById('ocr-result').style.display = 'none';
+  document.getElementById('ocr-empty').style.display = 'block';
+
+  // Upload via FormData
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch(API_URL + '/api/compta/ocr', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + _token },
+      body: formData
+    });
+
+    document.getElementById('ocr-loading').style.display = 'none';
+    document.getElementById('upz').style.display = 'block';
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showToast(err.detail || 'Erreur OCR', 'error');
+      return;
+    }
+
+    const result = await resp.json();
+    if (result.status !== 'ok') {
+      showToast(result.detail || 'Erreur d\'analyse', 'error');
+      return;
+    }
+
+    const data = result.data;
+    window._ocrData = data;
+
+    // Afficher les résultats
+    const fields = [
+      ['Fournisseur', data.fournisseur],
+      ['SIRET', data.siret],
+      ['N° facture', data.numero_facture],
+      ['Date facture', data.date_facture],
+      ['Date échéance', data.date_echeance],
+      ['Objet', data.objet],
+      ['Montant HT', data.montant_ht ? fmtEur(data.montant_ht) : null],
+      ['TVA ('+(data.taux_tva||20)+'%)', data.tva ? fmtEur(data.tva) : null],
+      ['Total TTC', data.montant_ttc ? fmtEur(data.montant_ttc) : null],
+      ['Catégorie suggérée', data.categorie_suggeree],
+      ['Compte suggéré', data.compte_suggere],
+    ];
+
+    const html = fields.filter(([k,v]) => v).map(([k,v]) =>
+      `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s4);font-size:12.5px"><span style="color:var(--t2)">${k}</span><span style="font-weight:600">${v}</span></div>`
+    ).join('');
+
+    document.getElementById('ocr-fields').innerHTML = html;
+    document.getElementById('ocr-result').style.display = 'block';
+    document.getElementById('ocr-empty').style.display = 'none';
+    showToast('Facture analysée ✓', 'success');
+  } catch (e) {
+    document.getElementById('ocr-loading').style.display = 'none';
+    document.getElementById('upz').style.display = 'block';
+    showToast('Erreur réseau : ' + e.message, 'error');
+  }
+};
+
+window.creerEcritureFromOCR = async function() {
+  const data = window._ocrData;
+  if (!data) { showToast('Aucune donnée OCR', 'error'); return; }
+
+  // Pré-remplir le modal écriture
+  const date = data.date_facture || new Date().toISOString().split('T')[0];
+  const montant = data.montant_ttc || data.montant_ht || 0;
+  const libelle = `${data.fournisseur||''} — ${data.numero_facture||''}`.trim();
+
+  // Compte débit selon catégorie
+  const compte_debit = data.compte_suggere || '604000';
+  const compte_credit = '401000'; // Fournisseurs
+
+  const ecritureData = {
+    date_ecriture: date,
+    numero_piece: data.numero_facture || null,
+    compte_debit, compte_credit,
+    libelle, montant: parseFloat(montant)
+  };
+
+  const result = await api.post('/api/compta/ecritures', ecritureData);
+  if (result) {
+    showToast('Écriture créée ✓ ' + libelle, 'success');
+    // Reset
+    window._ocrData = null;
+    document.getElementById('ocr-result').style.display = 'none';
+    document.getElementById('ocr-empty').style.display = 'block';
+    document.getElementById('ocr-preview').style.display = 'none';
+    document.getElementById('ocr-file').value = '';
+  }
+};
 
 // ── Modal écriture ──
 window.openModalEcriture = async function() {
