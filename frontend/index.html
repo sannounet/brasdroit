@@ -2791,23 +2791,52 @@ async function loadIS() {
 
 // ── URSSAF ──
 async function loadURSSAF() {
-  const annee = new Date().getFullYear();
+  const annee = window._exercice || new Date().getFullYear();
   const data = await api.get('/api/declarations/urssaf?annee='+annee);
   const c = document.querySelector('#p-decl-urssaf .content');
   if (!c||!data) return;
-  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const items = data.mois||(Array.isArray(data)?data:[]);
-  const rows = items.map(m => {
-    const total=(m.cotis_salariales||0)+(m.cotis_patronales||0);
-    return `<tr><td>${moisNoms[m.mois]||m.mois} ${annee}</td><td class="tr">${fmtEur(m.cotis_salariales||0)}</td><td class="tr">${fmtEur(m.cotis_patronales||0)}</td><td class="tr neg">${fmtEur(total)}</td></tr>`;
-  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
-  const totalCS=items.reduce((s,m)=>s+(m.cotis_salariales||0),0), totalCP=items.reduce((s,m)=>s+(m.cotis_patronales||0),0);
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const items = data.mois || [];
+  // Filtrer les mois avec données uniquement
+  const itemsAvecData = items.filter(m => (parseFloat(m.cotisations_salariales)||parseFloat(m.cotis_salariales)||0) + (parseFloat(m.cotisations_patronales)||parseFloat(m.cotis_patronales)||0) > 0);
+
+  if (itemsAvecData.length === 0) {
+    c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucune cotisation URSSAF pour ' + annee + '</div>';
+    return;
+  }
+
+  const rows = itemsAvecData.map(m => {
+    const cs = parseFloat(m.cotisations_salariales)||parseFloat(m.cotis_salariales)||0;
+    const cp = parseFloat(m.cotisations_patronales)||parseFloat(m.cotis_patronales)||0;
+    const total = cs + cp;
+    const decl = m.declaration;
+    let statut = 'À payer';
+    let cls = 'tw2';
+    if (decl) {
+      if (decl.statut === 'validee') { statut = '✓ Réglée'; cls = 'tg'; }
+      else if (decl.statut === 'transmise') { statut = '📤 Transmise'; cls = 'tb2'; }
+      else if (decl.statut === 'preparee') { statut = '⏳ Préparée'; cls = 'tw2'; }
+    }
+    return `<tr><td><strong>${moisNoms[m.mois]||m.mois} ${annee}</strong></td><td class="tr">${fmtEur(cs)}</td><td class="tr">${fmtEur(cp)}</td><td class="tr neg">${fmtEur(total)}</td><td><span class="tag ${cls}">${statut}</span></td></tr>`;
+  }).join('');
+
+  const totalCS = parseFloat(data.total_cotisations_salariales) || itemsAvecData.reduce((s,m) => s + (parseFloat(m.cotisations_salariales)||parseFloat(m.cotis_salariales)||0), 0);
+  const totalCP = parseFloat(data.total_cotisations_patronales) || itemsAvecData.reduce((s,m) => s + (parseFloat(m.cotisations_patronales)||parseFloat(m.cotis_patronales)||0), 0);
+  const totalGeneral = totalCS + totalCP;
+
   c.innerHTML = `
-    <div class="mg mg3"><div class="mc"><div class="ml">Cotis. salariales YTD</div><div class="mv neg">${fmtEur(totalCS)}</div></div>
-    <div class="mc"><div class="ml">Cotis. patronales YTD</div><div class="mv neg">${fmtEur(totalCP)}</div></div>
-    <div class="mc"><div class="ml">Total YTD</div><div class="mv neg">${fmtEur(totalCS+totalCP)}</div></div></div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">Cotisations mensuelles ${annee}</div>
-    <table><thead><tr><th>Mois</th><th class="tr">Salariales</th><th class="tr">Patronales</th><th class="tr">Total</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Cotisations salariales YTD</div><div class="mv neg">${fmtEur(totalCS)}</div></div>
+      <div class="mc"><div class="ml">Cotisations patronales YTD</div><div class="mv neg">${fmtEur(totalCP)}</div></div>
+      <div class="mc"><div class="ml">Total URSSAF YTD</div><div class="mv neg">${fmtEur(totalGeneral)}</div></div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Cotisations URSSAF mensuelles — ${annee}</div>
+      <table>
+        <thead><tr><th>Mois</th><th class="tr">Salariales</th><th class="tr">Patronales</th><th class="tr">Total</th><th>Statut</th></tr></thead>
+        <tbody>${rows}<tr class="subr"><td><strong>TOTAL ${itemsAvecData.length} mois</strong></td><td class="tr"><strong>${fmtEur(totalCS)}</strong></td><td class="tr"><strong>${fmtEur(totalCP)}</strong></td><td class="tr neg"><strong>${fmtEur(totalGeneral)}</strong></td><td></td></tr></tbody>
+      </table>
+    </div>`;
 }
 
 // ── DSN ──
