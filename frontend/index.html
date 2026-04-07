@@ -2014,29 +2014,94 @@ async function loadAlertes() {
 }
 
 // ── Factures ──
+window._facturesData = [];
+window._facturesFilters = {numero:'', client:'', bc:'', date:'', ht:'', ttc:'', statut:''};
+
 async function loadFactures() {
   const data = await api.get('/api/facturation/factures');
   if (!data) return;
+  window._facturesData = data;
+  renderFactures();
+}
+
+function renderFactures() {
   const tbody = document.getElementById('factures-tbody');
   if (!tbody) return;
-  tbody.innerHTML = data.map(f => {
-    const cls = f.statut === 'reglee' ? 'tg' : f.statut === 'en_retard' ? 'tr2' : f.statut === 'judiciaire' ? 'tp' : 'tw2';
-    const label = {reglee:'Réglée', en_retard:'En retard', judiciaire:'Judiciaire', emise:'Émise', en_attente:'En attente'}[f.statut] || f.statut;
+  const f = window._facturesFilters;
+  const matchFilter = (val, filter) => {
+    if (!filter) return true;
+    return String(val||'').toLowerCase().includes(filter.toLowerCase());
+  };
+
+  const filtered = window._facturesData.filter(fact => {
+    if (!matchFilter(fact.numero, f.numero)) return false;
+    if (!matchFilter(fact.client_id, f.client)) return false;
+    if (!matchFilter(fact.bc_origine, f.bc)) return false;
+    if (!matchFilter(fact.date_facture, f.date)) return false;
+    if (f.ht && !String(fact.montant_ht).includes(f.ht)) return false;
+    if (f.ttc && !String(fact.montant_ttc).includes(f.ttc)) return false;
+    if (f.statut && fact.statut !== f.statut) return false;
+    return true;
+  });
+
+  // Ligne de filtres en haut
+  const filterRow = `<tr style="background:var(--s3)">
+    <td><input type="text" placeholder="Filtrer..." value="${f.numero}" oninput="setFactureFilter('numero',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="Client..." value="${f.client}" oninput="setFactureFilter('client',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="BC..." value="${f.bc}" oninput="setFactureFilter('bc',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="Date..." value="${f.date}" oninput="setFactureFilter('date',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="HT..." value="${f.ht}" oninput="setFactureFilter('ht',this.value)" style="width:100%;padding:3px;font-size:11px;text-align:right"></td>
+    <td><input type="text" placeholder="TTC..." value="${f.ttc}" oninput="setFactureFilter('ttc',this.value)" style="width:100%;padding:3px;font-size:11px;text-align:right"></td>
+    <td><select onchange="setFactureFilter('statut',this.value)" style="width:100%;padding:3px;font-size:11px">
+      <option value="">Tous</option>
+      <option value="brouillon" ${f.statut==='brouillon'?'selected':''}>Brouillon</option>
+      <option value="emise" ${f.statut==='emise'?'selected':''}>Émise</option>
+      <option value="envoyee" ${f.statut==='envoyee'?'selected':''}>Envoyée</option>
+      <option value="en_attente" ${f.statut==='en_attente'?'selected':''}>En attente</option>
+      <option value="en_retard" ${f.statut==='en_retard'?'selected':''}>En retard</option>
+      <option value="reglee" ${f.statut==='reglee'?'selected':''}>Réglée</option>
+      <option value="judiciaire" ${f.statut==='judiciaire'?'selected':''}>Judiciaire</option>
+    </select></td>
+    <td><button class="btn btn-sm" onclick="resetFactureFilters()" title="Réinitialiser les filtres">↻</button></td>
+  </tr>`;
+
+  const dataRows = filtered.map(fact => {
+    const cls = fact.statut === 'reglee' ? 'tg' : fact.statut === 'en_retard' ? 'tr2' : fact.statut === 'judiciaire' ? 'tp' : 'tw2';
+    const label = {brouillon:'Brouillon',reglee:'Réglée', en_retard:'En retard', judiciaire:'Judiciaire', emise:'Émise', envoyee:'Envoyée', en_attente:'En attente'}[fact.statut] || fact.statut;
     return `<tr>
-      <td><b>${f.numero}</b></td>
-      <td>${f.client_id}</td>
-      <td>${f.bc_origine || '—'}</td>
-      <td>${f.date_facture}</td>
-      <td class="tr">${fmtEur(f.montant_ht)}</td>
-      <td class="tr ${f.statut === 'en_retard' ? 'neg' : 'pos'}">${fmtEur(f.montant_ttc)}</td>
+      <td><b>${fact.numero}</b></td>
+      <td>${fact.client_id}</td>
+      <td>${fact.bc_origine || '—'}</td>
+      <td>${fact.date_facture}</td>
+      <td class="tr">${fmtEur(fact.montant_ht)}</td>
+      <td class="tr ${fact.statut === 'en_retard' ? 'neg' : 'pos'}">${fmtEur(fact.montant_ttc)}</td>
       <td><span class="tag ${cls}">${label}</span></td>
       <td>
-        ${f.statut !== 'reglee' ? `<button class="btn btn-sm btn-s" onclick="reglerFacture(${f.id})">✓</button>` : ''}
-        ${f.statut === 'en_retard' ? `<button class="btn btn-sm btn-d" onclick="relancerFacture(${f.id})">Relancer</button>` : ''}
+        ${fact.statut !== 'reglee' ? `<button class="btn btn-sm btn-s" onclick="reglerFacture(${fact.id})" title="Marquer réglée">✓</button>` : ''}
+        ${fact.statut === 'en_retard' ? `<button class="btn btn-sm btn-d" onclick="relancerFacture(${fact.id})" title="Relancer">📧</button>` : ''}
       </td>
     </tr>`;
   }).join('');
+
+  const totalRow = filtered.length > 0 ? `<tr class="subr" style="background:var(--bb)">
+    <td colspan="4"><strong>${filtered.length} facture(s) sur ${window._facturesData.length}</strong></td>
+    <td class="tr"><strong>${fmtEur(filtered.reduce((s,f)=>s+(parseFloat(f.montant_ht)||0),0))}</strong></td>
+    <td class="tr"><strong>${fmtEur(filtered.reduce((s,f)=>s+(parseFloat(f.montant_ttc)||0),0))}</strong></td>
+    <td colspan="2"></td>
+  </tr>` : '';
+
+  tbody.innerHTML = filterRow + (dataRows || '<tr><td colspan="8" style="text-align:center;color:var(--t3);padding:1rem">Aucune facture correspondant aux filtres</td></tr>') + totalRow;
 }
+
+window.setFactureFilter = function(col, val) {
+  window._facturesFilters[col] = val;
+  renderFactures();
+};
+
+window.resetFactureFilters = function() {
+  window._facturesFilters = {numero:'', client:'', bc:'', date:'', ht:'', ttc:'', statut:''};
+  renderFactures();
+};
 
 async function creerFacture() {
   const client_id = parseInt(prompt('ID Client:') || '0');
@@ -2428,12 +2493,50 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Bons de commande ──
+window._bcData = [];
+window._bcFilters = {numero:'', client:'', date:'', ht:'', statut:''};
+
 async function loadBonsCommande() {
   const data = await api.get('/api/facturation/bc');
   if (!data) return;
+  window._bcData = data;
+  renderBC();
+}
+
+function renderBC() {
   const tbody = document.querySelector('#p-bdc table tbody');
   if (!tbody) return;
-  tbody.innerHTML = data.map(bc => {
+  const f = window._bcFilters;
+  const matchFilter = (val, filter) => {
+    if (!filter) return true;
+    return String(val||'').toLowerCase().includes(filter.toLowerCase());
+  };
+
+  const filtered = window._bcData.filter(bc => {
+    if (!matchFilter(bc.numero, f.numero)) return false;
+    if (!matchFilter(bc.client_id, f.client)) return false;
+    if (!matchFilter(bc.date_bc, f.date)) return false;
+    if (f.ht && !String(bc.montant_ht).includes(f.ht)) return false;
+    if (f.statut && bc.statut !== f.statut) return false;
+    return true;
+  });
+
+  const filterRow = `<tr style="background:var(--s3)">
+    <td><input type="text" placeholder="N°..." value="${f.numero}" oninput="setBCFilter('numero',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="Client..." value="${f.client}" oninput="setBCFilter('client',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="Date..." value="${f.date}" oninput="setBCFilter('date',this.value)" style="width:100%;padding:3px;font-size:11px"></td>
+    <td><input type="text" placeholder="HT..." value="${f.ht}" oninput="setBCFilter('ht',this.value)" style="width:100%;padding:3px;font-size:11px;text-align:right"></td>
+    <td><select onchange="setBCFilter('statut',this.value)" style="width:100%;padding:3px;font-size:11px">
+      <option value="">Tous</option>
+      <option value="brouillon" ${f.statut==='brouillon'?'selected':''}>Brouillon</option>
+      <option value="valide" ${f.statut==='valide'?'selected':''}>Validé</option>
+      <option value="converti" ${f.statut==='converti'?'selected':''}>Converti</option>
+      <option value="annule" ${f.statut==='annule'?'selected':''}>Annulé</option>
+    </select></td>
+    <td><button class="btn btn-sm" onclick="resetBCFilters()" title="Réinitialiser les filtres">↻</button></td>
+  </tr>`;
+
+  const dataRows = filtered.map(bc => {
     const cls = {brouillon:'tgy',valide:'tw2',converti:'tg',annule:'tr2'}[bc.statut]||'tgy';
     const label = {brouillon:'Brouillon',valide:'Validé',converti:'Converti',annule:'Annulé'}[bc.statut]||bc.statut;
     return `<tr>
@@ -2443,7 +2546,25 @@ async function loadBonsCommande() {
       <td>${bc.statut==='valide'?`<button class="btn btn-sm btn-s" onclick="convertirBC(${bc.id})">→ Facture</button>`:''}</td>
     </tr>`;
   }).join('');
+
+  const totalRow = filtered.length > 0 ? `<tr class="subr" style="background:var(--bb)">
+    <td colspan="3"><strong>${filtered.length} BC sur ${window._bcData.length}</strong></td>
+    <td class="tr"><strong>${fmtEur(filtered.reduce((s,b)=>s+(parseFloat(b.montant_ht)||0),0))}</strong></td>
+    <td colspan="2"></td>
+  </tr>` : '';
+
+  tbody.innerHTML = filterRow + (dataRows || '<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:1rem">Aucun bon de commande</td></tr>') + totalRow;
 }
+
+window.setBCFilter = function(col, val) {
+  window._bcFilters[col] = val;
+  renderBC();
+};
+
+window.resetBCFilters = function() {
+  window._bcFilters = {numero:'', client:'', date:'', ht:'', statut:''};
+  renderBC();
+};
 async function convertirBC(id) {
   const data = await api.post('/api/facturation/bc/'+id+'/convertir');
   if (data) { showToast('BC converti en facture '+data.numero,'success'); loadBonsCommande(); }
