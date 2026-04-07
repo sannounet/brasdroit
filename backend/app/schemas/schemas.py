@@ -189,6 +189,9 @@ class EmployeCreate(BaseModel):
     nom: str
     prenom: str
     email: Optional[str] = None
+    telephone: Optional[str] = None
+    date_naissance: Optional[date] = None
+    nir: Optional[str] = None
     type_contrat: TypeContrat = TypeContrat.cdi
     date_entree: date
     poste: Optional[str] = None

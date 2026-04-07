@@ -681,7 +681,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- EMPLOYES -->
 <div id="p-employes" class="panel">
-<div class="topbar"><div class="pt">Dossiers employes</div><div class="tb-r"><button class="btn btn-p">+ Ajouter employe</button></div></div>
+<div class="topbar"><div class="pt">Dossiers employes</div><div class="tb-r"><button class="btn btn-p" onclick="openModal('m-employe')">+ Ajouter employe</button></div></div>
 <div class="content">
 <div class="mg mg4">
 <div class="mc"><div class="ml">Effectif total</div><div class="mv" style="color:var(--b)" id="emp-count">—</div></div>
@@ -1356,6 +1356,41 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- MODALS -->
+<div class="mo" id="m-employe">
+<div class="modal" style="width:520px">
+<div class="mh">Nouvel employé<span class="mc2" onclick="closeModal('m-employe')">&times;</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Prénom *</div><input type="text" id="emp-prenom" placeholder="Marie"></div>
+  <div class="mrow"><div class="mlbl">Nom *</div><input type="text" id="emp-nom" placeholder="Dupont"></div>
+</div>
+<div class="mrow"><div class="mlbl">Email</div><input type="email" id="emp-email" placeholder="marie.dupont@entreprise.fr"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Téléphone</div><input type="tel" id="emp-tel" placeholder="06 12 34 56 78"></div>
+  <div class="mrow"><div class="mlbl">Date de naissance</div><input type="date" id="emp-naissance"></div>
+</div>
+<div class="mrow"><div class="mlbl">N° Sécurité sociale (NIR)</div><input type="text" id="emp-nir" placeholder="1 99 99 99 999 999 99" maxlength="15"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Poste</div><input type="text" id="emp-poste" placeholder="Développeur"></div>
+  <div class="mrow"><div class="mlbl">Type contrat *</div>
+    <select id="emp-contrat">
+      <option value="CDI">CDI</option>
+      <option value="CDD">CDD</option>
+      <option value="Alternance">Alternance</option>
+      <option value="Stage">Stage</option>
+    </select>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Date d'entrée *</div><input type="date" id="emp-entree"></div>
+  <div class="mrow"><div class="mlbl">Salaire brut mensuel (€) *</div><input type="number" id="emp-brut" step="100" placeholder="3000"></div>
+</div>
+<div class="mrow"><div class="mlbl">Taux PAS DGFIP (%)</div><input type="number" id="emp-pas" step="0.1" value="0" placeholder="Ex: 5.5"></div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitEmploye()">Créer l'employé</button>
+  <button class="btn" onclick="closeModal('m-employe')">Annuler</button>
+</div>
+</div></div>
+
 <div class="mo" id="m-budget-ligne">
 <div class="modal" style="width:480px">
 <div class="mh">Nouvelle ligne de budget previsionnel<span class="mc2" onclick="closeModal('m-budget-ligne')">&times;</span></div>
@@ -2396,6 +2431,39 @@ window.submitEcriture = async function() {
     // Vider les champs
     ['ec-piece','ec-debit','ec-credit','ec-libelle','ec-montant'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     loadJournal();
+  }
+};
+
+// ── Modal employé ──
+window.submitEmploye = async function() {
+  const prenom = document.getElementById('emp-prenom')?.value || '';
+  const nom = document.getElementById('emp-nom')?.value || '';
+  const email = document.getElementById('emp-email')?.value || null;
+  const telephone = document.getElementById('emp-tel')?.value || null;
+  const date_naissance = document.getElementById('emp-naissance')?.value || null;
+  const nir = document.getElementById('emp-nir')?.value || null;
+  const poste = document.getElementById('emp-poste')?.value || null;
+  const type_contrat = document.getElementById('emp-contrat')?.value || 'CDI';
+  const date_entree = document.getElementById('emp-entree')?.value || '';
+  const salaire_brut = parseFloat(document.getElementById('emp-brut')?.value || '0');
+  const taux_pas = parseFloat(document.getElementById('emp-pas')?.value || '0');
+
+  if (!prenom || !nom || !date_entree || !salaire_brut) {
+    showToast('Prénom, nom, date d\'entrée et salaire requis', 'error');
+    return;
+  }
+
+  const data = await api.post('/api/paie/employes', {
+    prenom, nom, email, telephone, date_naissance, nir, poste,
+    type_contrat, date_entree, salaire_brut, taux_pas
+  });
+
+  if (data) {
+    showToast('Employé ' + prenom + ' ' + nom + ' créé ✓', 'success');
+    closeModal('m-employe');
+    ['emp-prenom','emp-nom','emp-email','emp-tel','emp-naissance','emp-nir','emp-poste','emp-entree','emp-brut'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('emp-pas').value = '0';
+    loadEmployes();
   }
 };
 
