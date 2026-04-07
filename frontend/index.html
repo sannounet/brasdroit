@@ -2100,22 +2100,24 @@ async function relancerFacture(id, type = 'R1') {
 async function loadEmployes() {
   const data = await api.get('/api/paie/employes');
   if (!data) return;
+  const actifs = data.filter(e => e.is_active !== false);
   const container = document.getElementById('employes-list');
-  if (!container) return;
-  const colors = ['avb','avg','ava','avp'];
-  container.innerHTML = data.map((e, i) => `
-    <div class="ec" onclick="selectEmploye(${e.id})">
-      <div class="av ${colors[i % 4]}">${e.prenom[0]}${e.nom[0]}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${e.prenom} ${e.nom}</div>
-        <div style="font-size:11px;color:var(--t2)">${e.poste || ''} · ${e.type_contrat}</div>
+  if (container) {
+    const colors = ['avb','avg','ava','avp'];
+    container.innerHTML = actifs.map((e, i) => `
+      <div class="ec" onclick="selectEmploye(${e.id})">
+        <div class="av ${colors[i % 4]}">${(e.prenom||'?')[0]}${(e.nom||'?')[0]}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${e.prenom} ${e.nom}</div>
+          <div style="font-size:11px;color:var(--t2)">${e.poste || ''} · ${e.type_contrat||''}</div>
+        </div>
+        <span style="font-weight:600">${fmtEur(parseFloat(e.salaire_brut)||0)}</span>
       </div>
-      <span style="font-weight:600">${fmtEur(e.salaire_brut)}</span>
-    </div>
-  `).join('');
-  // Metrics
-  setVal('emp-count', data.length);
-  const totalBrut = data.reduce((s,e) => s + (e.salaire_brut||0), 0);
+    `).join('') || '<div style="color:var(--t3);text-align:center;padding:1rem">Aucun employé. Cliquez sur "+ Ajouter employé"</div>';
+  }
+  // Metrics — convertir les Decimal (string) en float
+  setVal('emp-count', actifs.length);
+  const totalBrut = actifs.reduce((s,e) => s + (parseFloat(e.salaire_brut)||0), 0);
   setVal('emp-masse', fmtEur(totalBrut));
   const estCharges = totalBrut * 0.42;
   setVal('emp-charges', fmtEur(estCharges));
