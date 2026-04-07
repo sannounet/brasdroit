@@ -2909,26 +2909,64 @@ async function loadLiasse() {
 }
 
 // ── Écarts ──
-async function loadEcarts() {
-  const annee = new Date().getFullYear();
-  const data = await api.get('/api/compta/ecarts?annee='+annee);
+async function loadEcarts(avecIA) {
+  const annee = window._exercice || new Date().getFullYear();
   const c = document.querySelector('#p-ecarts .content');
-  if (!c||!data) return;
+  if (!c) return;
+  if (avecIA) c.innerHTML = '<div style="text-align:center;padding:2rem"><div style="font-size:24px;margin-bottom:8px">🤖</div><div>Claude analyse vos écarts budgétaires...</div></div>';
+  const data = await api.get('/api/compta/ecarts?annee='+annee+(avecIA?'&avec_ia=true':''));
+  if (!data) { c.innerHTML = '<div style="color:var(--r)">Erreur de chargement</div>'; return; }
+
   const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const items = data.mois||[];
-  const rows = items.map(m => {
-    const flag = m.alerte ? 'background:var(--rb)' : '';
-    return `<tr style="${flag}"><td>${moisNoms[m.mois]||m.mois} ${annee}</td>
-      <td class="tr pos">${fmtEur(m.reel_revenus||0)}</td><td class="tr pos">${fmtEur(m.budget_revenus||0)}</td>
-      <td class="tr ${(m.ecart_revenus_pct||0)>=0?'pos':'neg'}">${(m.ecart_revenus_pct||0).toFixed(0)}%</td>
-      <td class="tr neg">${fmtEur(Math.abs(m.reel_depenses||0))}</td><td class="tr neg">${fmtEur(Math.abs(m.budget_depenses||0))}</td>
-      <td class="tr ${(m.ecart_depenses_pct||0)<=0?'pos':'neg'}">${(m.ecart_depenses_pct||0).toFixed(0)}%</td>
-      ${m.alerte?'<td><span class="tag tr2">⚠</span></td>':'<td><span class="tag tg">OK</span></td>'}</tr>`;
-  }).join('') || '<tr><td colspan="8" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
+  const comp = data.comparaisons || [];
+  const t = data.totaux || {};
+
+  if (comp.length === 0) {
+    c.innerHTML = `
+      <div class="fw"><div class="fic">⚠</div><div class="fb">
+        <div class="ftt">Aucune ligne de budget prévisionnel pour ${annee}</div>
+        <div class="fdesc">Pour comparer les écarts, créez d'abord votre budget prévisionnel.</div>
+        <div class="fa"><button class="btn btn-w" onclick="go('budget-prev')">→ Créer le budget prévisionnel</button></div>
+      </div></div>`;
+    return;
+  }
+
+  // Grouper par mois
+  const parMois = {};
+  comp.forEach(l => {
+    if (!parMois[l.mois]) parMois[l.mois] = [];
+    parMois[l.mois].push(l);
+  });
+
+  const moisRows = Object.entries(parMois).sort((a,b)=>a[0]-b[0]).map(([mois, lignes]) => {
+    const lignesHtml = lignes.map(l => {
+      const isRec = l.type_ligne === 'recette';
+      const cls = l.statut === 'favorable' ? 'pos' : (l.statut === 'alerte' ? 'neg' : 'neu');
+      const tag = l.statut === 'favorable' ? 'tg' : (l.statut === 'alerte' ? 'tr2' : 'tw2');
+      const tagLabel = l.statut === 'favorable' ? '✓ OK' : (l.statut === 'alerte' ? '⚠ Alerte' : '~');
+      return `<tr><td>${isRec?'💰':'💸'} ${l.categorie}</td><td>${l.libelle||''}</td><td class="tr">${fmtEur(l.montant_prevu)}</td><td class="tr">${fmtEur(l.montant_realise)}</td><td class="tr ${cls}">${l.ecart>=0?'+':''}${fmtEur(l.ecart)}</td><td class="tr ${cls}">${l.ecart_pct>=0?'+':''}${l.ecart_pct.toFixed(0)}%</td><td><span class="tag ${tag}">${tagLabel}</span></td></tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:1rem"><div class="ct" style="margin-bottom:.5rem">📅 ${moisNoms[mois]} ${annee}</div>
+      <table><thead><tr><th>Catégorie</th><th>Libellé</th><th class="tr">Prévu</th><th class="tr">Réalisé</th><th class="tr">Écart €</th><th class="tr">Écart %</th><th>Statut</th></tr></thead>
+      <tbody>${lignesHtml}</tbody></table></div>`;
+  }).join('');
+
+  const ecartRec = (t.ecart_recettes||0);
+  const ecartDep = (t.ecart_depenses||0);
+  const ecartResultat = (t.resultat_realise||0) - (t.resultat_prevu||0);
+
   c.innerHTML = `
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">Écarts budget vs réel — ${annee}</div>
-    <table><thead><tr><th>Mois</th><th class="tr">CA réel</th><th class="tr">CA budget</th><th class="tr">Écart</th><th class="tr">Dép. réel</th><th class="tr">Dép. budget</th><th class="tr">Écart</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">Recettes prévues</div><div class="mv pos">${fmtEur(t.recettes_prevues)}</div><div class="mt">Réel: ${fmtEur(t.recettes_realisees)}</div></div>
+      <div class="mc"><div class="ml">Dépenses prévues</div><div class="mv neg">${fmtEur(t.depenses_prevues)}</div><div class="mt">Réel: ${fmtEur(t.depenses_realisees)}</div></div>
+      <div class="mc"><div class="ml">Résultat prévu</div><div class="mv" style="color:${t.resultat_prevu>=0?'var(--g)':'var(--r)'}">${fmtEur(t.resultat_prevu)}</div><div class="mt">Réel: ${fmtEur(t.resultat_realise)}</div></div>
+      <div class="mc"><div class="ml">Écart résultat</div><div class="mv" style="color:${ecartResultat>=0?'var(--g)':'var(--r)'}">${ecartResultat>=0?'+':''}${fmtEur(ecartResultat)}</div></div>
+    </div>
+    ${data.nb_alertes > 0 ? `<div class="fd" style="margin-bottom:1rem"><div class="fic">⚠</div><div class="fb"><div class="ftt">${data.nb_alertes} ligne(s) en alerte (écart > 20%)</div></div></div>` : '<div class="fs" style="margin-bottom:1rem"><div class="fic">✓</div><div class="fb"><div class="ftt">Tous les écarts sont sous contrôle</div></div></div>'}
+    ${data.analyse_ia ? `<div class="card" style="margin-bottom:1rem;border-left:3px solid var(--p)"><div class="ct" style="margin-bottom:.5rem">🤖 Analyse Claude IA</div>${data.analyse_ia}</div>` : `<div style="text-align:center;margin-bottom:1rem"><button class="btn btn-pu" onclick="loadEcarts(true)">🤖 Lancer l'analyse Claude IA</button></div>`}
+    ${moisRows}`;
 }
+window.loadEcarts = loadEcarts;
 
 // ── Optimisation IA ──
 async function loadOptimisation() {

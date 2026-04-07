@@ -477,78 +477,119 @@ def liasse_fiscale(
 @router.get("/ecarts")
 def ecarts_budget_reel(
     annee: int = Query(..., description="Annee de l'analyse"),
+    avec_ia: bool = Query(False, description="Inclure analyse Claude IA"),
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Analyse mensuelle encaissements vs decaissements avec variance."""
+    """Compare le budget previsionnel ligne par ligne avec le realise (mouvements + factures)."""
+    from app.models.models import BudgetPrevisionnel
     eid = current_user.entreprise_id
 
+    # 1. Charger toutes les lignes du budget previsionnel
+    lignes_prev = db.query(BudgetPrevisionnel).filter(
+        BudgetPrevisionnel.entreprise_id == eid,
+        BudgetPrevisionnel.annee == annee,
+    ).all()
+
+    # 2. Charger les mouvements bancaires de l'annee
     mouvements = db.query(MouvementBancaire).filter(
         MouvementBancaire.entreprise_id == eid,
         extract("year", MouvementBancaire.date_operation) == annee,
     ).all()
 
-    # Agreger par mois
-    mois_data = {}
-    for m in range(1, 13):
-        mois_data[m] = {"encaissements": 0.0, "decaissements": 0.0}
+    # 3. Pour chaque ligne previsionnelle, calculer le realise correspondant
+    def normalize(s):
+        return (s or "").lower().strip()
 
-    for mv in mouvements:
-        mois = mv.date_operation.month
-        montant = float(mv.montant or 0)
-        if montant > 0:
-            mois_data[mois]["encaissements"] += montant
+    comparaisons = []
+    for ligne in lignes_prev:
+        # Trouver les mouvements du meme mois et de la meme categorie
+        mvts_mois = [m for m in mouvements if m.date_operation.month == ligne.mois]
+
+        if ligne.type_ligne == "recette":
+            mvts_match = [m for m in mvts_mois if float(m.montant) > 0 and normalize(m.categorie) == normalize(ligne.categorie)]
+            realise = sum(float(m.montant) for m in mvts_match)
         else:
-            mois_data[mois]["decaissements"] += abs(montant)
+            mvts_match = [m for m in mvts_mois if float(m.montant) < 0 and normalize(m.categorie) == normalize(ligne.categorie)]
+            realise = abs(sum(float(m.montant) for m in mvts_match))
 
-    # Calculer moyennes pour reference budget (moyenne glissante)
-    total_enc = sum(m["encaissements"] for m in mois_data.values())
-    total_dec = sum(m["decaissements"] for m in mois_data.values())
-    mois_actifs = sum(1 for m in mois_data.values() if m["encaissements"] > 0 or m["decaissements"] > 0)
-    budget_enc = (total_enc / mois_actifs) if mois_actifs else 0
-    budget_dec = (total_dec / mois_actifs) if mois_actifs else 0
+        prevu = float(ligne.montant_prevu)
+        ecart = realise - prevu
+        ecart_pct = (ecart / prevu * 100) if prevu else 0
 
-    resultats = []
-    alertes = []
-    for mois_num in range(1, 13):
-        d = mois_data[mois_num]
-        solde = d["encaissements"] - d["decaissements"]
+        # Statut
+        if ligne.type_ligne == "recette":
+            statut = "favorable" if ecart >= 0 else ("alerte" if ecart_pct < -20 else "ecart_leger")
+        else:
+            statut = "favorable" if ecart <= 0 else ("alerte" if ecart_pct > 20 else "ecart_leger")
 
-        # Variance par rapport a la moyenne
-        var_enc = ((d["encaissements"] - budget_enc) / budget_enc * 100) if budget_enc else 0
-        var_dec = ((d["decaissements"] - budget_dec) / budget_dec * 100) if budget_dec else 0
-
-        # Flag si ecart > 20%
-        alerte = None
-        if abs(var_enc) > 20 and d["encaissements"] > 0:
-            alerte = "encaissements" if var_enc < -20 else None
-        if var_dec > 20 and d["decaissements"] > 0:
-            alerte = "depassement_depenses"
-
-        if alerte:
-            alertes.append({"mois": mois_num, "type": alerte, "variance_pct": round(var_dec if alerte == "depassement_depenses" else var_enc, 1)})
-
-        resultats.append({
-            "mois": mois_num,
-            "encaissements": round(d["encaissements"], 2),
-            "decaissements": round(d["decaissements"], 2),
-            "solde": round(solde, 2),
-            "budget_encaissements": round(budget_enc, 2),
-            "budget_decaissements": round(budget_dec, 2),
-            "variance_enc_pct": round(var_enc, 1),
-            "variance_dec_pct": round(var_dec, 1),
+        comparaisons.append({
+            "id": ligne.id,
+            "mois": ligne.mois,
+            "categorie": ligne.categorie,
+            "libelle": ligne.libelle,
+            "type_ligne": ligne.type_ligne,
+            "montant_prevu": round(prevu, 2),
+            "montant_realise": round(realise, 2),
+            "ecart": round(ecart, 2),
+            "ecart_pct": round(ecart_pct, 1),
+            "statut": statut,
+            "nb_mouvements": len(mvts_match),
         })
 
-    return {
+    # 4. Totaux
+    total_prevu_rec = sum(c["montant_prevu"] for c in comparaisons if c["type_ligne"] == "recette")
+    total_realise_rec = sum(c["montant_realise"] for c in comparaisons if c["type_ligne"] == "recette")
+    total_prevu_dep = sum(c["montant_prevu"] for c in comparaisons if c["type_ligne"] == "depense")
+    total_realise_dep = sum(c["montant_realise"] for c in comparaisons if c["type_ligne"] == "depense")
+
+    # 5. Lignes en alerte
+    alertes_lignes = [c for c in comparaisons if c["statut"] == "alerte"]
+
+    result = {
         "annee": annee,
-        "mois": resultats,
+        "comparaisons": comparaisons,
         "totaux": {
-            "encaissements": round(total_enc, 2),
-            "decaissements": round(total_dec, 2),
-            "solde_annuel": round(total_enc - total_dec, 2),
+            "recettes_prevues": round(total_prevu_rec, 2),
+            "recettes_realisees": round(total_realise_rec, 2),
+            "depenses_prevues": round(total_prevu_dep, 2),
+            "depenses_realisees": round(total_realise_dep, 2),
+            "ecart_recettes": round(total_realise_rec - total_prevu_rec, 2),
+            "ecart_depenses": round(total_realise_dep - total_prevu_dep, 2),
+            "resultat_prevu": round(total_prevu_rec - total_prevu_dep, 2),
+            "resultat_realise": round(total_realise_rec - total_realise_dep, 2),
         },
-        "alertes": alertes,
+        "nb_alertes": len(alertes_lignes),
+        "alertes": alertes_lignes,
+        "analyse_ia": None,
     }
+
+    # 6. Analyse IA (optionnelle, lente)
+    if avec_ia and lignes_prev:
+        from app.services.ia_service import question_ia
+        contexte = {
+            "annee": annee,
+            "comparaisons": [{"mois": c["mois"], "cat": c["categorie"], "type": c["type_ligne"],
+                              "prevu": c["montant_prevu"], "realise": c["montant_realise"],
+                              "ecart_pct": c["ecart_pct"]} for c in comparaisons],
+            "totaux": result["totaux"],
+        }
+        prompt = f"""Tu es un expert-comptable. Analyse les ecarts entre le budget previsionnel et le realise de cette PME pour {annee}.
+Donnees: {contexte}
+
+Genere une analyse synthetique en HTML (sans markdown):
+1. <h3>Synthese globale</h3> : 2-3 phrases sur la situation generale
+2. <h3>Ecarts critiques</h3> : liste les 3 ecarts les plus importants avec leur cause probable
+3. <h3>Recommandations d'optimisation</h3> : 3-5 actions concretes priorisees pour reduire les ecarts negatifs
+4. <h3>Points positifs</h3> : ce qui fonctionne bien
+
+Sois concis (max 500 mots), chiffre les impacts, utilise <p>, <ul><li>, <strong>."""
+        try:
+            result["analyse_ia"] = question_ia(prompt, contexte)
+        except Exception as e:
+            result["analyse_ia"] = f"<p>Erreur IA: {str(e)}</p>"
+
+    return result
 
 
 # ─── OPTIMISATION IA ───
