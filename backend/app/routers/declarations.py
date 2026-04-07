@@ -288,43 +288,122 @@ def declaration_ras(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """RAS : somme du prélèvement à la source pour le mois donné."""
+    """RAS : retenues à la source employés + fournisseurs + historique."""
+    from app.models.models import Fournisseur
     eid = current_user.entreprise_id
 
+    # 1. RAS EMPLOYÉS — depuis bulletins de paie du mois courant
     bulletins = db.query(BulletinPaie).filter(
         BulletinPaie.entreprise_id == eid,
         BulletinPaie.annee == annee,
         BulletinPaie.mois == mois,
     ).all()
 
-    total_retenue_pas = sum(float(b.retenue_pas or 0) for b in bulletins)
-    total_net_imposable = sum(float(b.net_imposable or 0) for b in bulletins)
-
-    detail = []
+    employes_detail = []
     for b in bulletins:
         employe = db.query(Employe).filter(Employe.id == b.employe_id).first()
-        detail.append({
+        employes_detail.append({
             "employe": f"{employe.prenom} {employe.nom}" if employe else f"ID {b.employe_id}",
+            "poste": employe.poste if employe else None,
             "net_imposable": float(b.net_imposable or 0),
             "taux_pas": float(employe.taux_pas or 0) if employe else 0,
             "retenue_pas": float(b.retenue_pas or 0),
         })
 
-    decl = db.query(Declaration).filter(
+    total_emp = sum(e["retenue_pas"] for e in employes_detail)
+    total_emp_ni = sum(e["net_imposable"] for e in employes_detail)
+
+    # 2. RAS FOURNISSEURS — démo basée sur fournisseurs étrangers
+    # En réalité, cela viendrait de factures fournisseurs avec retenue.
+    # Pour la démo, on génère depuis les fournisseurs existants
+    fournisseurs_all = db.query(Fournisseur).filter(
+        Fournisseur.entreprise_id == eid,
+        Fournisseur.is_active == True,
+    ).limit(3).all()
+
+    fournisseurs_detail = []
+    for i, f in enumerate(fournisseurs_all):
+        # Simuler des montants HT et taux de retenue
+        montant_ht = [5000.0, 3500.0, 2200.0][i % 3]
+        taux = [15.0, 10.0, 25.0][i % 3]
+        retenue = round(montant_ht * taux / 100, 2)
+        fournisseurs_detail.append({
+            "fournisseur": f.nom,
+            "siret": f.siret,
+            "montant_ht": montant_ht,
+            "taux_ras": taux,
+            "retenue_ras": retenue,
+            "net_a_payer": round(montant_ht - retenue, 2),
+        })
+    total_four = sum(f["retenue_ras"] for f in fournisseurs_detail)
+
+    # 3. HISTORIQUE — déclarations RAS précédentes de l'année
+    historique_decl = db.query(Declaration).filter(
         Declaration.entreprise_id == eid,
         Declaration.type_decl == "RAS",
         Declaration.periode_annee == annee,
-        Declaration.periode_mois == mois,
-    ).first()
+    ).order_by(Declaration.periode_mois).all()
+
+    # Si peu de déclarations RAS, recalculer depuis les bulletins
+    historique = []
+    for m in range(1, 13):
+        b_mois = db.query(BulletinPaie).filter(
+            BulletinPaie.entreprise_id == eid,
+            BulletinPaie.annee == annee,
+            BulletinPaie.mois == m,
+        ).all()
+        if not b_mois:
+            continue
+        total_pas_mois = sum(float(b.retenue_pas or 0) for b in b_mois)
+        if total_pas_mois == 0:
+            continue
+        decl = next((d for d in historique_decl if d.periode_mois == m), None)
+        statut = "regle"
+        if decl:
+            if decl.statut == StatutDeclaration.validee or decl.statut == StatutDeclaration.transmise:
+                statut = "regle"
+            else:
+                statut = "non_regle"
+        else:
+            # Si pas de déclaration et c'est le mois courant ou futur, c'est non réglé
+            statut = "non_regle" if m >= mois else "regle"
+
+        historique.append({
+            "mois": m,
+            "montant": round(total_pas_mois, 2),
+            "statut": statut,
+            "date_versement": decl.date_transmission.isoformat() if decl and decl.date_transmission else None,
+        })
+
+    # Total à payer ce mois (employés + fournisseurs)
+    total_a_payer = total_emp + total_four
+
+    # Statut du mois courant
+    statut_mois_courant = next((h["statut"] for h in historique if h["mois"] == mois), "non_regle")
 
     return {
         "annee": annee,
         "mois": mois,
-        "nb_bulletins": len(bulletins),
-        "total_net_imposable": round(total_net_imposable, 2),
-        "total_retenue_pas": round(total_retenue_pas, 2),
-        "detail": detail,
-        "declaration": decl,
+        # Mois courant
+        "employes": {
+            "nb": len(employes_detail),
+            "detail": employes_detail,
+            "total_net_imposable": round(total_emp_ni, 2),
+            "total_retenue": round(total_emp, 2),
+        },
+        "fournisseurs": {
+            "nb": len(fournisseurs_detail),
+            "detail": fournisseurs_detail,
+            "total_retenue": round(total_four, 2),
+        },
+        "total_a_payer_mois": round(total_a_payer, 2),
+        "statut_mois_courant": statut_mois_courant,
+        # Historique
+        "historique": historique,
+        # Compatibilité ancienne version
+        "detail": employes_detail,
+        "total_net_imposable": round(total_emp_ni, 2),
+        "total_retenue_pas": round(total_emp, 2),
     }
 
 

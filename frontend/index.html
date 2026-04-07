@@ -2843,13 +2843,16 @@ async function loadDSN() {
     <table><thead><tr><th>Employé</th><th class="tr">Brut</th><th class="tr">Net imposable</th><th class="tr">PAS</th><th>Statut</th></tr></thead><tbody>${rows}${emps.length?`<tr class="subr"><td><strong>TOTAL ${emps.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tB)}</strong></td><td class="tr"><strong>${fmtEur(tN)}</strong></td><td class="tr neg"><strong>${fmtEur(tP)}</strong></td><td></td></tr>`:''}</tbody></table></div>`;
 }
 
-// ── RAS (PAS) ──
+// ── RAS (Retenue à la source) ──
 async function loadRAS() {
   const annee = window._exercice || new Date().getFullYear();
+  // Trouver le dernier mois avec données
   let data = null, moisTrouve = 0;
   for (let m = 12; m >= 1; m--) {
     const r = await api.get('/api/declarations/ras?annee='+annee+'&mois='+m);
-    if (r && (r.detail||r.employes||[]).length > 0) { data = r; moisTrouve = m; break; }
+    if (r && r.employes && r.employes.detail && r.employes.detail.length > 0) {
+      data = r; moisTrouve = m; break;
+    }
   }
   const c = document.querySelector('#p-ras .content');
   if (!c) return;
@@ -2857,21 +2860,73 @@ async function loadRAS() {
     c.innerHTML = '<div class="card" style="text-align:center;padding:2rem;color:var(--t3)">Aucune donnée RAS pour ' + annee + '</div>';
     return;
   }
-  const emps = data.detail||data.employes||[];
-  let tN=parseFloat(data.total_net_imposable)||0, tP=parseFloat(data.total_retenue_pas)||0;
-  if (!tN) emps.forEach(e => tN += parseFloat(e.net_imposable)||0);
-  if (!tP) emps.forEach(e => tP += parseFloat(e.retenue_pas)||0);
-  const rows = emps.map(e => {
+
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const emps = data.employes || {};
+  const four = data.fournisseurs || {};
+  const hist = data.historique || [];
+
+  // Tableau employés
+  const empRows = (emps.detail||[]).map(e => {
     const ni = parseFloat(e.net_imposable)||0;
     const taux = parseFloat(e.taux_pas)||0;
     const pas = parseFloat(e.retenue_pas)||0;
-    const nom = e.employe || `${e.prenom||''} ${e.nom||''}`.trim() || 'Employé';
-    return `<tr><td><strong>${nom}</strong></td><td class="tr">${fmtEur(ni)}</td><td class="tr">${taux.toFixed(1)}%</td><td class="tr neg">${fmtEur(pas)}</td></tr>`;
-  }).join('')||'<tr><td colspan="4" style="color:var(--t3);text-align:center">Aucune donnée</td></tr>';
-  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  c.innerHTML = `<div class="card" style="text-align:center;padding:1.5rem;margin-bottom:1rem"><div class="ml">Total PAS à reverser — ${moisNoms[moisTrouve]} ${annee}</div><div style="font-size:36px;font-weight:800;color:var(--r)">${fmtEur(tP)}</div></div>
-    <div class="card"><div class="ct" style="margin-bottom:.75rem">Détail par employé</div>
-    <table><thead><tr><th>Employé</th><th class="tr">Net imposable</th><th>Taux PAS</th><th class="tr">RAS</th></tr></thead><tbody>${rows}${emps.length?`<tr class="subr"><td><strong>TOTAL ${emps.length} employé(s)</strong></td><td class="tr"><strong>${fmtEur(tN)}</strong></td><td></td><td class="tr neg"><strong>${fmtEur(tP)}</strong></td></tr>`:''}</tbody></table></div>`;
+    return `<tr><td><strong>${e.employe||'Employé'}</strong>${e.poste?'<div style="font-size:11px;color:var(--t2)">'+e.poste+'</div>':''}</td><td class="tr">${fmtEur(ni)}</td><td class="tr">${taux.toFixed(1)}%</td><td class="tr neg">${fmtEur(pas)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun employé</td></tr>';
+
+  // Tableau fournisseurs
+  const fourRows = (four.detail||[]).map(f => {
+    return `<tr><td><strong>${f.fournisseur||''}</strong>${f.siret?'<div style="font-size:11px;color:var(--t2)">SIRET '+f.siret+'</div>':''}</td><td class="tr">${fmtEur(f.montant_ht)}</td><td class="tr">${(f.taux_ras||0).toFixed(0)}%</td><td class="tr neg">${fmtEur(f.retenue_ras)}</td><td class="tr pos">${fmtEur(f.net_a_payer)}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun fournisseur soumis à RAS</td></tr>';
+
+  // Tableau historique
+  const histRows = hist.map(h => {
+    const isCurrent = h.mois === moisTrouve;
+    const cls = h.statut === 'regle' ? 'tg' : 'tr2';
+    const label = h.statut === 'regle' ? '✓ Réglé' : '⚠ À régler';
+    return `<tr ${isCurrent?'style="background:var(--bb)"':''}><td><strong>${moisNoms[h.mois]} ${annee}</strong>${isCurrent?' <span class="tag tb2">Mois courant</span>':''}</td><td class="tr neg">${fmtEur(h.montant)}</td><td>${h.date_versement?h.date_versement.substring(0,10):'—'}</td><td><span class="tag ${cls}">${label}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--t3)">Aucun historique</td></tr>';
+
+  const totalAPayer = data.total_a_payer_mois || 0;
+  const statutCourant = data.statut_mois_courant || 'non_regle';
+  const totalRegle = hist.filter(h => h.statut === 'regle').reduce((s,h) => s+h.montant, 0);
+  const totalNonRegle = hist.filter(h => h.statut === 'non_regle').reduce((s,h) => s+h.montant, 0);
+
+  c.innerHTML = `
+    <div class="mg mg4">
+      <div class="mc"><div class="ml">À payer ${moisNoms[moisTrouve]} ${annee}</div><div class="mv" style="color:var(--r)">${fmtEur(totalAPayer)}</div><div class="mt" style="color:${statutCourant==='regle'?'var(--g)':'var(--r)'}">${statutCourant==='regle'?'✓ Réglé':'⚠ Non réglé'}</div></div>
+      <div class="mc"><div class="ml">RAS Employés</div><div class="mv neg">${fmtEur(emps.total_retenue||0)}</div><div class="mt">${emps.nb||0} employé(s)</div></div>
+      <div class="mc"><div class="ml">RAS Fournisseurs</div><div class="mv neg">${fmtEur(four.total_retenue||0)}</div><div class="mt">${four.nb||0} fournisseur(s)</div></div>
+      <div class="mc"><div class="ml">Total réglé YTD</div><div class="mv pos">${fmtEur(totalRegle)}</div><div class="mt">Reste: ${fmtEur(totalNonRegle)}</div></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">👤 RAS Employés — ${moisNoms[moisTrouve]} ${annee}</div>
+        <table><thead><tr><th>Employé</th><th class="tr">Net imposable</th><th>Taux</th><th class="tr">Retenue PAS</th></tr></thead>
+        <tbody>${empRows}<tr class="subr"><td><strong>TOTAL</strong></td><td class="tr"><strong>${fmtEur(emps.total_net_imposable||0)}</strong></td><td></td><td class="tr neg"><strong>${fmtEur(emps.total_retenue||0)}</strong></td></tr></tbody></table>
+      </div>
+      <div class="card">
+        <div class="ct" style="margin-bottom:.75rem">🏢 RAS Fournisseurs — ${moisNoms[moisTrouve]} ${annee}</div>
+        <table><thead><tr><th>Fournisseur</th><th class="tr">HT</th><th>Taux</th><th class="tr">Retenue</th><th class="tr">Net</th></tr></thead>
+        <tbody>${fourRows}<tr class="subr"><td><strong>TOTAL</strong></td><td class="tr">—</td><td></td><td class="tr neg"><strong>${fmtEur(four.total_retenue||0)}</strong></td><td></td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="card" style="background:linear-gradient(135deg,#FEF2F2,#FFFFFF);border-left:3px solid var(--r);text-align:center;padding:1.5rem">
+      <div class="ml">💰 TOTAL À VERSER À LA DGFIP — ${moisNoms[moisTrouve]} ${annee}</div>
+      <div style="font-size:42px;font-weight:800;color:var(--r);margin-top:8px">${fmtEur(totalAPayer)}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px">Employés ${fmtEur(emps.total_retenue||0)} + Fournisseurs ${fmtEur(four.total_retenue||0)}</div>
+      ${statutCourant === 'regle'
+        ? '<div style="margin-top:8px"><span class="tag tg" style="font-size:13px;padding:6px 12px">✓ Versement effectué</span></div>'
+        : '<div style="margin-top:8px"><span class="tag tr2" style="font-size:13px;padding:6px 12px">⚠ À verser avant le 5 du mois suivant</span></div>'}
+    </div>
+
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">📅 Historique des RAS ${annee}</div>
+      <table><thead><tr><th>Période</th><th class="tr">Montant</th><th>Date versement</th><th>Statut</th></tr></thead>
+      <tbody>${histRows}</tbody></table>
+    </div>`;
 }
 
 // ── Budget ──
