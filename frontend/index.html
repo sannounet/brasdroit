@@ -2685,32 +2685,163 @@ async function loadReleves() {
 }
 
 // ── Bilan ──
+function getBilanOverrides(annee) {
+  try { return JSON.parse(localStorage.getItem('bd_bilan_'+annee) || '{}'); } catch(e) { return {}; }
+}
+function saveBilanOverrides(annee, o) { localStorage.setItem('bd_bilan_'+annee, JSON.stringify(o)); }
+
+window.editBilanLine = function(side, numero) {
+  const annee = window._currentBilanAnnee;
+  const overrides = getBilanOverrides(annee);
+  const key = side+'_'+numero;
+  const current = overrides[key] !== undefined ? overrides[key] : 0;
+  const v = prompt('Nouvelle valeur pour le compte ' + numero + ' (€):', current);
+  if (v === null) return;
+  const n = parseFloat(v.replace(/\s/g,'').replace(',','.'));
+  if (isNaN(n)) { showToast('Montant invalide','error'); return; }
+  overrides[key] = n;
+  saveBilanOverrides(annee, overrides);
+  showToast('Valeur sauvegardée ✓','success');
+  loadBilan();
+};
+
+window.addBilanLine = function(side) {
+  const numero = prompt('Numéro de compte (ex: 215000):');
+  if (!numero) return;
+  const libelle = prompt('Libellé:');
+  if (!libelle) return;
+  const v = prompt('Montant (€):');
+  const n = parseFloat((v||'0').replace(/\s/g,'').replace(',','.'));
+  if (isNaN(n)) { showToast('Montant invalide','error'); return; }
+  const annee = window._currentBilanAnnee;
+  const overrides = getBilanOverrides(annee);
+  overrides['_custom_'+side+'_'+numero] = {libelle, montant: n};
+  saveBilanOverrides(annee, overrides);
+  showToast('Ligne ajoutée ✓','success');
+  loadBilan();
+};
+
+window.deleteBilanLine = function(key) {
+  if (!confirm('Supprimer cette modification ?')) return;
+  const annee = window._currentBilanAnnee;
+  const overrides = getBilanOverrides(annee);
+  delete overrides[key];
+  saveBilanOverrides(annee, overrides);
+  loadBilan();
+};
+
+window.resetBilanOverrides = function() {
+  if (!confirm('Supprimer toutes les modifications manuelles ?')) return;
+  localStorage.removeItem('bd_bilan_'+window._currentBilanAnnee);
+  loadBilan();
+};
+
 async function loadBilan() {
-  const annee = (window._exercice||new Date().getFullYear());
+  const annee = window._exercice || new Date().getFullYear();
+  window._currentBilanAnnee = annee;
   const data = await api.get('/api/compta/bilan?annee='+annee);
   const c = document.querySelector('#p-bilan .content');
   if (!c||!data) return;
+
+  const overrides = getBilanOverrides(annee);
   const classLabels = {1:'Capitaux',2:'Immobilisations',3:'Stocks',4:'Tiers',5:'Trésorerie'};
-  const makeRows = (obj, cls) => Object.entries(obj||{}).map(([k,v]) =>
-    `<tr><td>Classe ${k}</td><td>${classLabels[k]||'Classe '+k}</td><td class="tr ${cls}">${fmtEur(v)}</td></tr>`
-  ).join('') || '<tr><td colspan="3" style="color:var(--t3)">Aucune donnée</td></tr>';
-  c.innerHTML = `<div class="g2">
-    <div class="card"><div class="ch"><div class="ct">Actif</div><span class="tag tg">${fmtEur(data.total_actif)}</span></div>
-      <table><thead><tr><th>Classe</th><th>Libellé</th><th class="tr">Montant</th></tr></thead><tbody>
-        ${makeRows(data.actif,'pos')}
-        <tr class="sr"><td></td><td>TOTAL ACTIF</td><td class="tr" style="font-weight:800">${fmtEur(data.total_actif)}</td></tr>
-      </tbody></table></div>
-    <div class="card"><div class="ch"><div class="ct">Passif</div><span class="tag tr2">${fmtEur(data.total_passif)}</span></div>
-      <table><thead><tr><th>Classe</th><th>Libellé</th><th class="tr">Montant</th></tr></thead><tbody>
-        ${makeRows(data.passif,'neg')}
-        <tr class="sr"><td></td><td>TOTAL PASSIF</td><td class="tr" style="font-weight:800">${fmtEur(data.total_passif)}</td></tr>
-      </tbody></table></div>
-  </div>
-  <div class="card" style="text-align:center;padding:1.5rem">
-    <div class="ml">Exercice ${annee}</div>
-    <div style="font-size:28px;font-weight:800;color:${data.total_actif-data.total_passif>=0?'var(--g)':'var(--r)'}">${fmtEur(data.total_actif-data.total_passif)}</div>
-    <div style="font-size:12px;color:var(--t2)">Écart Actif - Passif</div>
-  </div>`;
+
+  // Détail des comptes (depuis le backend)
+  let actifDetail = (data.actif_detail || []).slice();
+  let passifDetail = (data.passif_detail || []).slice();
+
+  // Appliquer les overrides sur les lignes existantes
+  actifDetail.forEach(l => {
+    const k = 'actif_'+l.numero;
+    if (overrides[k] !== undefined) { l.montant = overrides[k]; l.modifie = true; }
+  });
+  passifDetail.forEach(l => {
+    const k = 'passif_'+l.numero;
+    if (overrides[k] !== undefined) { l.montant = overrides[k]; l.modifie = true; }
+  });
+
+  // Ajouter les lignes personnalisées
+  Object.entries(overrides).forEach(([k, v]) => {
+    if (k.startsWith('_custom_actif_')) {
+      const numero = k.replace('_custom_actif_','');
+      actifDetail.push({numero, libelle: v.libelle, classe: parseInt(numero[0])||0, montant: v.montant, custom: true});
+    }
+    if (k.startsWith('_custom_passif_')) {
+      const numero = k.replace('_custom_passif_','');
+      passifDetail.push({numero, libelle: v.libelle, classe: parseInt(numero[0])||0, montant: v.montant, custom: true});
+    }
+  });
+
+  actifDetail.sort((a,b) => (a.numero||'').localeCompare(b.numero||''));
+  passifDetail.sort((a,b) => (a.numero||'').localeCompare(b.numero||''));
+
+  const totalActif = actifDetail.reduce((s,l) => s + (l.montant||0), 0);
+  const totalPassif = passifDetail.reduce((s,l) => s + (l.montant||0), 0);
+  const ecart = totalActif - totalPassif;
+
+  // Grouper par classe
+  const groupByClasse = (lignes) => {
+    const groups = {};
+    lignes.forEach(l => {
+      const cl = l.classe || parseInt((l.numero||'')[0]) || 0;
+      if (!groups[cl]) groups[cl] = [];
+      groups[cl].push(l);
+    });
+    return groups;
+  };
+
+  const renderSide = (lignes, side) => {
+    if (lignes.length === 0) return '<tr><td colspan="4" style="color:var(--t3);text-align:center;padding:1rem">Aucune ligne</td></tr>';
+    const groups = groupByClasse(lignes);
+    return Object.keys(groups).sort().map(cl => {
+      const total = groups[cl].reduce((s,l) => s + (l.montant||0), 0);
+      return `<tr class="sr"><td colspan="4">Classe ${cl} — ${classLabels[cl]||''} <span style="float:right">${fmtEur(total)}</span></td></tr>` +
+        groups[cl].map(l => {
+          const badges = [];
+          if (l.custom) badges.push('<span style="font-size:9px;background:var(--a);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">Personnalisé</span>');
+          else if (l.modifie) badges.push('<span style="font-size:9px;background:var(--p);color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">Modifié</span>');
+          const delBtn = l.custom
+            ? `<button class="btn btn-sm btn-d" onclick="deleteBilanLine('_custom_${side}_${l.numero}')" title="Supprimer">×</button>`
+            : (l.modifie ? `<button class="btn btn-sm" onclick="deleteBilanLine('${side}_${l.numero}')" title="Annuler modification">↺</button>` : '');
+          return `<tr><td class="mono" style="color:var(--t2)">${l.numero}</td><td>${l.libelle}${badges.join('')}</td><td class="tr" style="font-family:monospace">${fmtEur(l.montant)}</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="editBilanLine('${side}','${l.numero}')" title="Modifier">✏</button>${delBtn}</td></tr>`;
+        }).join('');
+    }).join('');
+  };
+
+  const nbOverrides = Object.keys(overrides).length;
+
+  c.innerHTML = `
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">📊</div><div class="fb"><div class="ftt">Bilan comptable détaillé — Exercice ${annee} ${nbOverrides>0?'<span class="tag tw2">'+nbOverrides+' modification(s) manuelle(s)</span>':''}</div><div class="fdesc">Cliquez sur ✏ pour modifier une valeur ou ajoutez des lignes personnalisées.</div></div></div>
+
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      ${nbOverrides>0?'<button class="btn btn-d" onclick="resetBilanOverrides()">↻ Réinitialiser les modifications</button>':''}
+      <button class="btn btn-p" onclick="exportPage('bilan')">📄 Export PDF</button>
+    </div>
+
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Total Actif</div><div class="mv pos">${fmtEur(totalActif)}</div><div class="mt">${actifDetail.length} compte(s)</div></div>
+      <div class="mc"><div class="ml">Total Passif</div><div class="mv neg">${fmtEur(totalPassif)}</div><div class="mt">${passifDetail.length} compte(s)</div></div>
+      <div class="mc"><div class="ml">Équilibre</div><div class="mv" style="color:${Math.abs(ecart)<1?'var(--g)':'var(--r)'}">${Math.abs(ecart)<1?'✓ OK':fmtEur(ecart)}</div></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><div class="ct">📋 ACTIF — Emplois</div><span class="tag tg">${fmtEur(totalActif)}</span></div>
+        <button class="btn btn-sm" style="margin-bottom:.5rem" onclick="addBilanLine('actif')">+ Ajouter une ligne</button>
+        <table>
+          <thead><tr><th>Compte</th><th>Libellé</th><th class="tr">Montant</th><th></th></tr></thead>
+          <tbody>${renderSide(actifDetail, 'actif')}<tr class="sr" style="background:var(--bb)"><td></td><td><strong>TOTAL ACTIF</strong></td><td class="tr"><strong>${fmtEur(totalActif)}</strong></td><td></td></tr></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">📋 PASSIF — Ressources</div><span class="tag tr2">${fmtEur(totalPassif)}</span></div>
+        <button class="btn btn-sm" style="margin-bottom:.5rem" onclick="addBilanLine('passif')">+ Ajouter une ligne</button>
+        <table>
+          <thead><tr><th>Compte</th><th>Libellé</th><th class="tr">Montant</th><th></th></tr></thead>
+          <tbody>${renderSide(passifDetail, 'passif')}<tr class="sr" style="background:var(--bb)"><td></td><td><strong>TOTAL PASSIF</strong></td><td class="tr"><strong>${fmtEur(totalPassif)}</strong></td><td></td></tr></tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ── Compte de résultat ──

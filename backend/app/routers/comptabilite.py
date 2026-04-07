@@ -116,7 +116,7 @@ def bilan(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Bilan simplifie : actif (debits classes 1-5) et passif (credits classes 1-5)."""
+    """Bilan détaillé : actif et passif décomposés par compte avec libellés."""
     eid = current_user.entreprise_id
 
     ecritures = db.query(Ecriture).filter(
@@ -124,35 +124,66 @@ def bilan(
         extract("year", Ecriture.date_ecriture) == annee,
     ).all()
 
-    actif: dict[int, float] = {}   # classe -> total debit
-    passif: dict[int, float] = {}  # classe -> total credit
-
-    # Charger la correspondance numero compte -> classe
     comptes = db.query(CompteComptable).filter(
         CompteComptable.entreprise_id == eid
     ).all()
     compte_classe = {c.numero: c.classe for c in comptes}
+    compte_libelle = {c.numero: c.libelle for c in comptes}
+
+    # Détail par compte
+    actif_detail = {}  # numero -> {libelle, classe, montant}
+    passif_detail = {}
+
+    actif_par_classe = {}
+    passif_par_classe = {}
 
     for e in ecritures:
         montant = float(e.montant or 0)
+        cd = e.compte_debit
+        cc = e.compte_credit
+        classe_d = compte_classe.get(cd) or _classe_from_numero(cd)
+        classe_c = compte_classe.get(cc) or _classe_from_numero(cc)
 
-        # Cote debit
-        classe_d = compte_classe.get(e.compte_debit) or _classe_from_numero(e.compte_debit)
         if classe_d and 1 <= classe_d <= 5:
-            actif[classe_d] = actif.get(classe_d, 0) + montant
+            if cd not in actif_detail:
+                actif_detail[cd] = {"numero": cd, "libelle": compte_libelle.get(cd, _libelle_default(cd)), "classe": classe_d, "montant": 0}
+            actif_detail[cd]["montant"] += montant
+            actif_par_classe[classe_d] = actif_par_classe.get(classe_d, 0) + montant
 
-        # Cote credit
-        classe_c = compte_classe.get(e.compte_credit) or _classe_from_numero(e.compte_credit)
         if classe_c and 1 <= classe_c <= 5:
-            passif[classe_c] = passif.get(classe_c, 0) + montant
+            if cc not in passif_detail:
+                passif_detail[cc] = {"numero": cc, "libelle": compte_libelle.get(cc, _libelle_default(cc)), "classe": classe_c, "montant": 0}
+            passif_detail[cc]["montant"] += montant
+            passif_par_classe[classe_c] = passif_par_classe.get(classe_c, 0) + montant
+
+    # Trier par numéro de compte
+    actif_lignes = sorted(actif_detail.values(), key=lambda x: x["numero"])
+    passif_lignes = sorted(passif_detail.values(), key=lambda x: x["numero"])
 
     return {
         "annee": annee,
-        "actif": actif,
-        "passif": passif,
-        "total_actif": sum(actif.values()),
-        "total_passif": sum(passif.values()),
+        "actif": actif_par_classe,
+        "passif": passif_par_classe,
+        "actif_detail": actif_lignes,
+        "passif_detail": passif_lignes,
+        "total_actif": sum(actif_par_classe.values()),
+        "total_passif": sum(passif_par_classe.values()),
     }
+
+
+def _libelle_default(numero: str) -> str:
+    """Libellé par défaut basé sur le numéro de compte PCG."""
+    defaults = {
+        "101": "Capital social", "106": "Réserves", "110": "Report à nouveau", "164": "Emprunts",
+        "211": "Terrains", "213": "Constructions", "215": "Installations techniques",
+        "218": "Autres immobilisations", "281": "Amortissements",
+        "401": "Fournisseurs", "411": "Clients", "421": "Personnel - Rémunérations",
+        "431": "URSSAF", "437": "Cotisations sociales", "445": "TVA",
+        "447": "Autres impôts", "455": "Compte courant associés",
+        "512": "Banque", "530": "Caisse",
+    }
+    prefix = numero[:3] if len(numero) >= 3 else numero
+    return defaults.get(prefix, f"Compte {numero}")
 
 
 # ─── COMPTE DE RESULTAT ───
