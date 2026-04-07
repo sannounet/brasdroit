@@ -1221,7 +1221,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PAIE PARAMS -->
 <div id="p-paie-params" class="panel">
-<div class="topbar"><div class="pt">Parametrage paie</div><div class="tb-r"><span class="ai">&#10022; Taux 2026</span><button class="btn btn-p" style="margin-left:6px">Sauvegarder</button></div></div>
+<div class="topbar"><div class="pt">Parametrage paie</div><div class="tb-r"><span class="ai">&#10022; Taux 2026</span><button class="btn btn-p" style="margin-left:6px" onclick="sauverPaieParams()">Sauvegarder</button></div></div>
 <div class="content">
 <div class="g2">
 <div class="card"><div class="ct" style="margin-bottom:.75rem">Informations entreprise</div>
@@ -1251,29 +1251,15 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- RUBRIQUES -->
 <div id="p-rubriques" class="panel">
-<div class="topbar"><div class="pt">Rubriques de paie</div><div class="tb-r"><button class="btn">+ Creer rubrique</button></div></div>
-<div class="content">
-<div class="fi"><div class="fic">&#10022;</div><div class="fb"><div class="ftt">Chaque rubrique est entierement modifiable &mdash; alerte si le net descend sous le SMIC</div></div></div>
-<div class="card">
-<div class="rh rr"><span>Code</span><span>Libelle</span><span>Base calcul</span><span>Taux</span><span>Plafond</span><span>Compte</span><span>Actif</span></div>
-<div class="rr"><span class="mono">1000</span><span><input class="ei" value="Salaire de base brut" style="font-weight:600"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Mensuel fixe</option></select></span><span>&#8212;</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="641100" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">1100</span><span><input class="ei" value="Heures sup. 25%"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Horaire x h</option></select></span><span><input class="ei" value="125" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="641200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">2000</span><span><input class="ei" value="Prime de performance"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Montant fixe</option></select></span><span>&#8212;</span><span><select style="font-size:11px;padding:2px;width:auto"><option>4x PMSS</option></select></span><span><input class="ei" value="641300" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">3100</span><span><input class="ei" value="Maladie salariale (0.40%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut total</option></select></span><span><input class="ei" value="0.40" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">3200</span><span><input class="ei" value="Retraite CNAV sal. (6.90%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut plafonne SS</option></select></span><span><input class="ei" value="6.90" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>1x PMSS</option></select></span><span><input class="ei" value="431300" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">3300</span><span><input class="ei" value="Agirc-Arrco sal. (3.15%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Brut plafonne SS</option></select></span><span><input class="ei" value="3.15" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>1x PMSS</option></select></span><span><input class="ei" value="431400" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">4100</span><span><input class="ei" value="CSG deductible (6.80%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>98.25% brut</option></select></span><span><input class="ei" value="6.80" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431500" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">4200</span><span><input class="ei" value="CSG/CRDS non deductible (2.90%)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>98.25% brut</option></select></span><span><input class="ei" value="2.90" style="width:32px">%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Sans plafond</option></select></span><span><input class="ei" value="431600" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr" style="background:var(--ab)"><span class="mono">7000</span><span><input class="ei" value="Retenue PAS" style="color:var(--at)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Net imposable</option></select></span><span style="color:var(--at)">Taux DGFIP</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Taux individuel</option></select></span><span><input class="ei" value="447200" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">8000</span><span><input class="ei" value="Ticket restaurant (part patronale)"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Nb jours x 6.83</option></select></span><span>60%</span><span><select style="font-size:11px;padding:2px;width:auto"><option>Max legal</option></select></span><span><input class="ei" value="647000" style="width:52px;font-family:monospace"></span><span><button class="tog on" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-<div class="rr"><span class="mono">9000</span><span><input class="ei" value="Reduction Fillon"></span><span><select style="font-size:11px;padding:2px;width:auto"><option>Coeff x brut</option></select></span><span style="color:var(--g)">Auto IA</span><span><select style="font-size:11px;padding:2px;width:auto"><option>SMIC &lt;=1.6</option></select></span><span><input class="ei" value="649000" style="width:52px;font-family:monospace"></span><span><button class="tog" onclick="this.classList.toggle('on')"><div class="togk"></div></button></span></div>
-</div>
+<div class="topbar"><div class="pt">Rubriques de paie</div><div class="tb-r"><button class="btn" onclick="resetRubriques()">↻ Réinitialiser</button><button class="btn btn-p" onclick="openModal('m-rubrique')" style="margin-left:6px">+ Créer rubrique</button></div></div>
+<div class="content" id="rubriques-content">
+<div style="text-align:center;padding:2rem;color:var(--t3)">Chargement...</div>
 </div>
 </div>
 
 <!-- JOURNAL PAIE -->
 <div id="p-journal-paie" class="panel">
-<div class="topbar"><div class="pt">Journal de paie detaille</div><div class="tb-r"><button class="btn btn-p">Export comptable</button></div></div>
+<div class="topbar"><div class="pt">Journal de paie detaille</div><div class="tb-r"><button class="btn btn-p" onclick="exportPage('journal-paie')">Export comptable</button></div></div>
 <div class="content">
 <div class="mg mg3">
 <div class="mc"><div class="ml">Masse salariale brute</div><div class="mv" id="jp-masse">—</div></div>
@@ -1356,6 +1342,40 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- MODALS -->
+<div class="mo" id="m-rubrique">
+<div class="modal" style="width:480px">
+<div class="mh">Nouvelle rubrique de paie<span class="mc2" onclick="closeModal('m-rubrique')">&times;</span></div>
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Code</div><input type="text" id="rb-code" placeholder="9100" maxlength="6"></div>
+  <div class="mrow"><div class="mlbl">Libellé</div><input type="text" id="rb-libelle" placeholder="Nom de la rubrique"></div>
+</div>
+<div class="mrow"><div class="mlbl">Type</div>
+  <select id="rb-type">
+    <option value="brut">Brut (salaire / prime)</option>
+    <option value="cotisation_sal">Cotisation salariale</option>
+    <option value="cotisation_pat">Cotisation patronale</option>
+    <option value="net">Élément net (PAS, ticket resto...)</option>
+  </select>
+</div>
+<div class="mrow"><div class="mlbl">Base de calcul</div>
+  <select id="rb-base">
+    <option value="brut_total">Brut total</option>
+    <option value="brut_plafonne">Brut plafonné Sécu</option>
+    <option value="bcsg">Base CSG (98.25% brut)</option>
+    <option value="net_imposable">Net imposable</option>
+    <option value="fixe">Montant fixe</option>
+  </select>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Taux (%)</div><input type="number" id="rb-taux" step="0.01" placeholder="0.00"></div>
+  <div class="mrow"><div class="mlbl">Compte comptable</div><input type="text" id="rb-compte" placeholder="641100"></div>
+</div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitRubrique()">Créer la rubrique</button>
+  <button class="btn" onclick="closeModal('m-rubrique')">Annuler</button>
+</div>
+</div></div>
+
 <div class="mo" id="m-employe">
 <div class="modal" style="width:520px">
 <div class="mh">Nouvel employé<span class="mc2" onclick="closeModal('m-employe')">&times;</span></div>
@@ -2295,6 +2315,7 @@ window._goLoaders = {
     'optim': loadOptimisation,
     'profil': function(){ if(window.loadProfil) window.loadProfil(); },
     'budget-prev': function(){ if(window.loadBudgetPrev) window.loadBudgetPrev(); },
+    'rubriques': function(){ if(window.loadRubriques) window.loadRubriques(); },
   };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -3139,6 +3160,139 @@ window.deleteBudgetLigne = async function(id) {
   if (!confirm('Supprimer cette ligne ?')) return;
   const data = await api.delete('/api/declarations/budget-previsionnel/' + id);
   if (data) { showToast('Ligne supprimée ✓', 'success'); loadBudgetPrev(); }
+};
+
+window.sauverPaieParams = async function() {
+  // Sauve les infos entreprise visibles dans la page
+  const nom = document.getElementById('pp-nom')?.value;
+  const siret = document.getElementById('pp-siret')?.value;
+  if (nom || siret) {
+    const data = await api.patch('/api/entreprise', {nom, siret});
+    if (data) showToast('Paramètres paie sauvegardés ✓', 'success');
+  } else {
+    showToast('Aucune modification à sauvegarder', 'info');
+  }
+};
+
+// ── Rubriques de paie (stockage local) ──
+const RUBRIQUES_DEFAULT = [
+  {code:'1000', libelle:'Salaire de base brut', type:'brut', base:'fixe', taux:null, compte:'641100', actif:true},
+  {code:'1100', libelle:'Heures supplémentaires 25%', type:'brut', base:'fixe', taux:125, compte:'641200', actif:true},
+  {code:'2000', libelle:'Prime de performance', type:'brut', base:'fixe', taux:null, compte:'641300', actif:true},
+  {code:'3100', libelle:'Maladie salariale', type:'cotisation_sal', base:'brut_total', taux:0.40, compte:'431200', actif:true},
+  {code:'3200', libelle:'Retraite CNAV salariale', type:'cotisation_sal', base:'brut_plafonne', taux:6.90, compte:'431300', actif:true},
+  {code:'3300', libelle:'Agirc-Arrco salariale', type:'cotisation_sal', base:'brut_plafonne', taux:3.15, compte:'431400', actif:true},
+  {code:'4100', libelle:'CSG déductible', type:'cotisation_sal', base:'bcsg', taux:6.80, compte:'431500', actif:true},
+  {code:'4200', libelle:'CSG/CRDS non déductible', type:'cotisation_sal', base:'bcsg', taux:2.90, compte:'431600', actif:true},
+  {code:'5100', libelle:'Maladie patronale', type:'cotisation_pat', base:'brut_total', taux:13.00, compte:'645100', actif:true},
+  {code:'5200', libelle:'CNAV patronale', type:'cotisation_pat', base:'brut_plafonne', taux:8.55, compte:'645200', actif:true},
+  {code:'5300', libelle:'Chômage patronal', type:'cotisation_pat', base:'brut_total', taux:4.05, compte:'645300', actif:true},
+  {code:'5400', libelle:'Agirc-Arrco patronal', type:'cotisation_pat', base:'brut_plafonne', taux:4.72, compte:'645400', actif:true},
+  {code:'7000', libelle:'Retenue PAS', type:'net', base:'net_imposable', taux:null, compte:'447200', actif:true},
+  {code:'8000', libelle:'Ticket restaurant (part patronale)', type:'net', base:'fixe', taux:60, compte:'647000', actif:true},
+  {code:'9000', libelle:'Réduction Fillon', type:'cotisation_pat', base:'brut_total', taux:null, compte:'649000', actif:false},
+];
+
+function getRubriques() {
+  try {
+    const r = JSON.parse(localStorage.getItem('bd_rubriques') || 'null');
+    if (Array.isArray(r) && r.length) return r;
+  } catch(e) {}
+  return RUBRIQUES_DEFAULT;
+}
+
+function saveRubriques(list) {
+  localStorage.setItem('bd_rubriques', JSON.stringify(list));
+}
+
+window.loadRubriques = function() {
+  const rubriques = getRubriques();
+  const c = document.getElementById('rubriques-content');
+  if (!c) return;
+
+  const typeLabels = {brut:'Brut',cotisation_sal:'Cotis. salariale',cotisation_pat:'Cotis. patronale',net:'Net'};
+  const typeColors = {brut:'tb2',cotisation_sal:'tw2',cotisation_pat:'tr2',net:'tg'};
+  const baseLabels = {brut_total:'Brut total',brut_plafonne:'Brut plafonné',bcsg:'Base CSG',net_imposable:'Net imposable',fixe:'Montant fixe'};
+
+  // Grouper par type
+  const groupes = {brut:[], cotisation_sal:[], cotisation_pat:[], net:[]};
+  rubriques.forEach(r => { if (groupes[r.type]) groupes[r.type].push(r); });
+
+  const groupHtml = (type, label) => {
+    const items = groupes[type];
+    if (!items.length) return '';
+    const rows = items.map((r, idx) => {
+      const realIdx = rubriques.findIndex(x => x.code === r.code);
+      return `<tr ${!r.actif?'style="opacity:.4"':''}>
+        <td class="mono"><strong>${r.code}</strong></td>
+        <td>${r.libelle}</td>
+        <td>${baseLabels[r.base]||r.base}</td>
+        <td class="tr">${r.taux!=null?r.taux+'%':'—'}</td>
+        <td class="mono">${r.compte}</td>
+        <td><span class="tag ${r.actif?'tg':'tgy'}">${r.actif?'Actif':'Inactif'}</span></td>
+        <td>
+          <button class="btn btn-sm" onclick="toggleRubrique(${realIdx})">${r.actif?'⏸':'▶'}</button>
+          <button class="btn btn-sm btn-d" onclick="deleteRubrique(${realIdx})">×</button>
+        </td>
+      </tr>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:.875rem">
+      <div class="ct" style="margin-bottom:.5rem"><span class="tag ${typeColors[type]}">${label}</span> <span style="color:var(--t3);font-size:11px;font-weight:400">${items.length} rubrique(s)</span></div>
+      <table><thead><tr><th>Code</th><th>Libellé</th><th>Base</th><th class="tr">Taux</th><th>Compte</th><th>Statut</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    </div>`;
+  };
+
+  c.innerHTML = `
+    <div class="fi"><div class="fic">✨</div><div class="fb"><div class="ftt">Configuration des rubriques de paie</div><div class="fdesc">${rubriques.length} rubriques au total · ${rubriques.filter(r=>r.actif).length} actives. Modifications stockées localement.</div></div></div>
+    ${groupHtml('brut','Éléments de brut')}
+    ${groupHtml('cotisation_sal','Cotisations salariales')}
+    ${groupHtml('cotisation_pat','Cotisations patronales')}
+    ${groupHtml('net','Éléments nets')}`;
+};
+
+window.submitRubrique = function() {
+  const code = document.getElementById('rb-code')?.value || '';
+  const libelle = document.getElementById('rb-libelle')?.value || '';
+  const type = document.getElementById('rb-type')?.value || 'brut';
+  const base = document.getElementById('rb-base')?.value || 'brut_total';
+  const tauxStr = document.getElementById('rb-taux')?.value || '';
+  const taux = tauxStr ? parseFloat(tauxStr) : null;
+  const compte = document.getElementById('rb-compte')?.value || '';
+  if (!code || !libelle || !compte) { showToast('Code, libellé et compte requis', 'error'); return; }
+
+  const rubriques = getRubriques();
+  if (rubriques.find(r => r.code === code)) { showToast('Ce code existe déjà', 'error'); return; }
+  rubriques.push({code, libelle, type, base, taux, compte, actif:true});
+  saveRubriques(rubriques);
+  showToast('Rubrique ' + code + ' créée ✓', 'success');
+  closeModal('m-rubrique');
+  ['rb-code','rb-libelle','rb-taux','rb-compte'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  loadRubriques();
+};
+
+window.toggleRubrique = function(idx) {
+  const rubriques = getRubriques();
+  if (rubriques[idx]) {
+    rubriques[idx].actif = !rubriques[idx].actif;
+    saveRubriques(rubriques);
+    loadRubriques();
+  }
+};
+
+window.deleteRubrique = function(idx) {
+  if (!confirm('Supprimer cette rubrique ?')) return;
+  const rubriques = getRubriques();
+  rubriques.splice(idx, 1);
+  saveRubriques(rubriques);
+  showToast('Rubrique supprimée', 'success');
+  loadRubriques();
+};
+
+window.resetRubriques = function() {
+  if (!confirm('Réinitialiser toutes les rubriques aux valeurs par défaut ?')) return;
+  localStorage.removeItem('bd_rubriques');
+  showToast('Rubriques réinitialisées', 'success');
+  loadRubriques();
 };
 
 // ── Profil ──
