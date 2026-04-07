@@ -71,6 +71,54 @@ def create_ecriture(
     return e
 
 
+class _EcritureUpdate(_BM):
+    date_ecriture: Optional[str] = None
+    compte_debit: Optional[str] = None
+    compte_credit: Optional[str] = None
+    libelle: Optional[str] = None
+    montant: Optional[float] = None
+    numero_piece: Optional[str] = None
+
+
+@router.patch("/ecritures/{ecriture_id}")
+def update_ecriture(
+    ecriture_id: int,
+    data: _EcritureUpdate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Modifier une écriture existante."""
+    e = db.query(Ecriture).filter(
+        Ecriture.id == ecriture_id,
+        Ecriture.entreprise_id == current_user.entreprise_id,
+    ).first()
+    if not e:
+        raise HTTPException(404, "Écriture introuvable")
+    update_data = data.model_dump(exclude_unset=True)
+    for k, v in update_data.items():
+        setattr(e, k, v)
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.delete("/ecritures/{ecriture_id}")
+def delete_ecriture(
+    ecriture_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Supprimer une écriture."""
+    e = db.query(Ecriture).filter(
+        Ecriture.id == ecriture_id,
+        Ecriture.entreprise_id == current_user.entreprise_id,
+    ).first()
+    if not e:
+        raise HTTPException(404, "Écriture introuvable")
+    db.delete(e)
+    db.commit()
+    return {"status": "ok"}
+
+
 # ─── COMPTES COMPTABLES ───
 
 @router.get("/comptes")

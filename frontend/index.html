@@ -2765,10 +2765,23 @@ window.submitEcriture = async function() {
   const libelle = document.getElementById('ec-libelle')?.value || '';
   const montant = parseFloat(document.getElementById('ec-montant')?.value || '0');
   if (!d || !debit || !credit || !libelle || !montant) { showToast('Tous les champs sont requis','error'); return; }
-  const data = await api.post('/api/compta/ecritures', {date_ecriture:d, numero_piece:piece, compte_debit:debit, compte_credit:credit, libelle, montant});
+
+  const payload = {date_ecriture:d, numero_piece:piece, compte_debit:debit, compte_credit:credit, libelle, montant};
+  const editingId = window._editingEcritureId;
+  let data;
+  if (editingId) {
+    data = await api.patch('/api/compta/ecritures/'+editingId, payload);
+  } else {
+    data = await api.post('/api/compta/ecritures', payload);
+  }
+
   if (data) {
-    showToast('Écriture enregistrée ✓','success');
+    showToast(editingId ? 'Écriture modifiée ✓' : 'Écriture enregistrée ✓','success');
     closeModal('m-ecriture');
+    window._editingEcritureId = null;
+    // Restaurer le titre du modal
+    const mh = document.querySelector('#m-ecriture .mh');
+    if (mh) mh.innerHTML = 'Nouvelle écriture comptable<span class="mc2" onclick="closeModal(\'m-ecriture\')">×</span>';
     // Vider les champs
     ['ec-piece','ec-debit','ec-credit','ec-libelle','ec-montant'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
     loadJournal();
@@ -2825,28 +2838,75 @@ window.submitCompte = async function() {
 };
 
 // ── Journal comptable ──
+window._journalData = [];
+
 async function loadJournal() {
   const data = await api.get('/api/compta/ecritures');
   if (!data) return;
+  window._journalData = data;
+  renderJournal();
+}
+
+function renderJournal() {
   const tbody = document.querySelector('#p-journal table tbody');
   if (!tbody) return;
+  const data = window._journalData || [];
   let flags = 0;
+
+  // Ajouter colonne Actions dans le thead
+  const thead = document.querySelector('#p-journal table thead tr');
+  if (thead && !thead.querySelector('.col-actions')) {
+    thead.insertAdjacentHTML('beforeend', '<th class="col-actions">Actions</th>');
+  }
+
   tbody.innerHTML = data.map(e => {
     const hasFlag = e.flag_type ? true : false;
     if (hasFlag) flags++;
     const bg = hasFlag ? 'background:var(--rb)' : '';
     const flagTag = hasFlag ? `<span class="tag tr2">⚠ ${e.flag_type}</span>` : '<span class="tag tg">OK</span>';
     return `<tr style="${bg}">
-      <td>${e.date_ecriture}</td><td class="mono">${e.numero_piece||''}</td>
+      <td>${e.date_ecriture||e.date||''}</td><td class="mono">${e.numero_piece||''}</td>
       <td class="mono">${e.compte_debit}</td><td>${e.libelle}</td>
-      <td class="tr">${fmtEur(e.montant)}</td><td class="tr">${e.compte_credit}</td>
+      <td class="tr">${fmtEur(e.montant)}</td><td class="mono">${e.compte_credit}</td>
       <td>${e.is_lettree?'<span class="tag tg">'+e.lettre+'</span>':'<span class="tag tgy">—</span>'}</td>
       <td>${flagTag}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="editEcriture(${e.id})" title="Modifier">✏</button>
+        <button class="btn btn-sm btn-d" onclick="deleteEcriture(${e.id})" title="Supprimer">×</button>
+      </td>
     </tr>`;
-  }).join('');
+  }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--t3)">Aucune écriture</td></tr>';
   const flagCountEls = document.querySelectorAll('#p-journal .tb-r .tag');
   if (flagCountEls[0]) flagCountEls[0].textContent = flags + ' anomalies';
 }
+
+window.editEcriture = async function(id) {
+  const e = (window._journalData||[]).find(x => x.id === id);
+  if (!e) return;
+  // Ouvrir le modal écriture pré-rempli
+  document.getElementById('ec-date').value = e.date_ecriture || e.date || '';
+  document.getElementById('ec-piece').value = e.numero_piece || '';
+  document.getElementById('ec-debit').value = e.compte_debit || '';
+  document.getElementById('ec-credit').value = e.compte_credit || '';
+  document.getElementById('ec-libelle').value = e.libelle || '';
+  document.getElementById('ec-montant').value = e.montant || 0;
+  // Stocker l'ID pour la sauvegarde
+  window._editingEcritureId = id;
+  // Charger les comptes pour autocomplete
+  const comptes = await api.get('/api/compta/comptes');
+  const dl = document.getElementById('dl-comptes');
+  if (dl && comptes) dl.innerHTML = comptes.map(c => `<option value="${c.numero}">${c.numero} — ${c.libelle}</option>`).join('');
+  // Modifier le titre du modal
+  const mh = document.querySelector('#m-ecriture .mh');
+  if (mh) mh.innerHTML = 'Modifier l\'écriture #' + id + '<span class="mc2" onclick="closeModal(\'m-ecriture\')">×</span>';
+  openModal('m-ecriture');
+};
+
+window.deleteEcriture = async function(id) {
+  if (!confirm('Supprimer cette écriture ?')) return;
+  const data = await api.delete('/api/compta/ecritures/'+id);
+  if (data) { showToast('Écriture supprimée ✓', 'success'); loadJournal(); }
+};
 
 // ── Lettrage ──
 window._lettrageSelected = {mouvement: null, ecriture: null};
