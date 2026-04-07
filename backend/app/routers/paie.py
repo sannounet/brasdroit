@@ -149,26 +149,46 @@ def valider_bulletin(data: BulletinRequest, current_user=Depends(get_current_use
 
 @router.get("/bulletins/{annee}/{mois}")
 def bulletins_du_mois(annee: int, mois: int, current_user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Résumé DSN-ready de tous les bulletins d'un mois."""
+    """Résumé DSN-ready de tous les bulletins d'un mois avec details."""
     bulletins = db.query(BulletinPaie).filter(
         BulletinPaie.entreprise_id == current_user.entreprise_id,
         BulletinPaie.annee == annee,
         BulletinPaie.mois == mois
     ).all()
-    
+
+    # Charger les employés pour avoir leurs noms
+    emp_ids = list(set(b.employe_id for b in bulletins))
+    emps = {e.id: e for e in db.query(Employe).filter(Employe.id.in_(emp_ids)).all()} if emp_ids else {}
+
     total_brut = sum(float(b.salaire_brut or 0) for b in bulletins)
     total_charges = sum(float(b.cotis_patronales or 0) for b in bulletins)
+    total_cot_sal = sum(float(b.cotis_salariales or 0) for b in bulletins)
     total_pas = sum(float(b.retenue_pas or 0) for b in bulletins)
     total_net = sum(float(b.net_a_payer or 0) for b in bulletins)
-    
+    total_net_imp = sum(float(b.net_imposable or 0) for b in bulletins)
+
     return {
         "periode": f"{mois:02d}/{annee}",
         "nb_employes": len(bulletins),
         "masse_salariale_brute": total_brut,
         "charges_patronales": total_charges,
+        "cotis_salariales_total": total_cot_sal,
         "cout_total_employeur": total_brut + total_charges,
         "pas_total": total_pas,
         "net_total": total_net,
-        "bulletins": [{"id": b.id, "employe_id": b.employe_id, "net_a_payer": float(b.net_a_payer or 0)} for b in bulletins],
+        "net_imposable_total": total_net_imp,
+        "bulletins": [{
+            "id": b.id,
+            "employe_id": b.employe_id,
+            "employe_nom": f"{emps[b.employe_id].prenom} {emps[b.employe_id].nom}" if b.employe_id in emps else "",
+            "salaire_brut": float(b.salaire_brut or 0),
+            "cotis_salariales": float(b.cotis_salariales or 0),
+            "cotis_patronales": float(b.cotis_patronales or 0),
+            "net_imposable": float(b.net_imposable or 0),
+            "retenue_pas": float(b.retenue_pas or 0),
+            "net_a_payer": float(b.net_a_payer or 0),
+            "cout_employeur": float(b.cout_employeur or 0),
+            "dsn_transmis": b.dsn_transmis,
+        } for b in bulletins],
         "dsn_pret": all(b.dsn_transmis for b in bulletins) if bulletins else False,
     }

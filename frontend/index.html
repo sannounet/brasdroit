@@ -1309,7 +1309,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- CHARGES -->
 <div id="p-charges" class="panel">
-<div class="topbar"><div class="pt">Charges patronales &#8212; Detail</div><div class="tb-r"><button class="btn btn-p">Export URSSAF</button></div></div>
+<div class="topbar"><div class="pt">Charges patronales &#8212; Detail</div><div class="tb-r"><button class="btn btn-p" onclick="exportPage('charges')">Export URSSAF</button></div></div>
 <div class="content">
 <div class="mg mg3">
 <div class="mc"><div class="ml">Masse salariale brute</div><div class="mv" id="ch-masse">—</div></div>
@@ -2598,21 +2598,41 @@ async function loadPaieParams() {
 
 // ── Charges patronales ──
 async function loadChargesPatronales() {
-  const now = new Date();
-  const mois = now.getMonth() || 12;
-  const annee = mois === 12 ? now.getFullYear() - 1 : now.getFullYear();
-  const data = await api.get('/api/paie/bulletins/'+annee+'/'+mois);
-  if (!data) return;
-  const bulletins = data.bulletins || [];
-  let totalBrut=0,totalChPat=0,totalCout=0;
+  const annee = window._exercice || new Date().getFullYear();
+  // Trouver le dernier mois avec des données pour cette année
+  let data = null;
+  let moisTrouve = 0;
+  for (let m = 12; m >= 1; m--) {
+    const r = await api.get('/api/paie/bulletins/'+annee+'/'+m);
+    if (r && r.bulletins && r.bulletins.length > 0) {
+      data = r;
+      moisTrouve = m;
+      break;
+    }
+  }
+
   const tbody = document.getElementById('charges-pat-tbody');
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  if (!data || !data.bulletins || data.bulletins.length === 0) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:1rem">Aucun bulletin de paie pour '+annee+'</td></tr>';
+    setVal('ch-masse', fmtEur(0));
+    setVal('ch-charges', fmtEur(0));
+    setVal('ch-cout', fmtEur(0));
+    return;
+  }
+
+  const bulletins = data.bulletins;
+  let totalBrut=0, totalChPat=0, totalCout=0;
   if (tbody) {
     tbody.innerHTML = bulletins.map(b => {
-      const brut = b.salaire_brut||0, chPat = b.cotis_patronales||0, cout = brut + chPat;
+      const brut = parseFloat(b.salaire_brut)||0;
+      const chPat = parseFloat(b.cotis_patronales)||0;
+      const cout = brut + chPat;
       totalBrut+=brut; totalChPat+=chPat; totalCout+=cout;
-      return `<tr><td>${b.employe_nom||''}</td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(chPat)}</td><td class="tr">${fmtEur(cout)}</td></tr>`;
+      return `<tr><td>${b.employe_nom||'Employé #'+b.employe_id}</td><td class="tr">${fmtEur(brut)}</td><td class="tr neg">${fmtEur(chPat)}</td><td class="tr">${fmtEur(cout)}</td></tr>`;
     }).join('');
-    if (bulletins.length) tbody.innerHTML += `<tr class="subr"><td>TOTAL</td><td class="tr">${fmtEur(totalBrut)}</td><td class="tr neg">${fmtEur(totalChPat)}</td><td class="tr">${fmtEur(totalCout)}</td></tr>`;
+    tbody.innerHTML += `<tr class="subr"><td><strong>TOTAL ${moisNoms[moisTrouve]} ${annee}</strong></td><td class="tr"><strong>${fmtEur(totalBrut)}</strong></td><td class="tr neg"><strong>${fmtEur(totalChPat)}</strong></td><td class="tr"><strong>${fmtEur(totalCout)}</strong></td></tr>`;
   }
   setVal('ch-masse', fmtEur(totalBrut));
   setVal('ch-charges', fmtEur(totalChPat));
