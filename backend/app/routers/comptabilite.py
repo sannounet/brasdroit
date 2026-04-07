@@ -411,16 +411,20 @@ def _libelle_compte_resultat(numero: str) -> str:
 @router.get("/ratios")
 def ratios(
     annee: int = Query(..., description="Annee de l'exercice"),
+    mois: Optional[int] = Query(None, description="Mois spécifique (1-12) ou rien pour annuel"),
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Ratios financiers complets : rentabilité, structure, liquidité, gestion."""
     eid = current_user.entreprise_id
 
-    ecritures = db.query(Ecriture).filter(
+    q = db.query(Ecriture).filter(
         Ecriture.entreprise_id == eid,
         extract("year", Ecriture.date_ecriture) == annee,
-    ).all()
+    )
+    if mois:
+        q = q.filter(extract("month", Ecriture.date_ecriture) == mois)
+    ecritures = q.all()
 
     comptes = db.query(CompteComptable).filter(
         CompteComptable.entreprise_id == eid
@@ -483,18 +487,24 @@ def ratios(
             if cc.startswith("401"): dettes_fournisseurs += montant
             else: dettes_fiscales += montant
 
-    # CA HT depuis factures reglees
-    ca = float(db.query(func.coalesce(func.sum(Facture.montant_ht), 0)).filter(
+    # CA HT depuis factures reglees (filtré par mois si spécifié)
+    ca_query = db.query(func.coalesce(func.sum(Facture.montant_ht), 0)).filter(
         Facture.entreprise_id == eid,
         extract("year", Facture.date_facture) == annee,
         Facture.statut == StatutFacture.reglee,
-    ).scalar())
+    )
+    if mois:
+        ca_query = ca_query.filter(extract("month", Facture.date_facture) == mois)
+    ca = float(ca_query.scalar())
 
     # CA TTC pour DSO
-    ca_ttc = float(db.query(func.coalesce(func.sum(Facture.montant_ttc), 0)).filter(
+    ca_ttc_query = db.query(func.coalesce(func.sum(Facture.montant_ttc), 0)).filter(
         Facture.entreprise_id == eid,
         extract("year", Facture.date_facture) == annee,
-    ).scalar())
+    )
+    if mois:
+        ca_ttc_query = ca_ttc_query.filter(extract("month", Facture.date_facture) == mois)
+    ca_ttc = float(ca_ttc_query.scalar())
 
     resultat_net = produits - charges
     valeur_ajoutee = produits - achats - services_ext

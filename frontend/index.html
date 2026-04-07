@@ -1156,7 +1156,16 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- RATIOS -->
 <div id="p-ratios" class="panel">
-<div class="topbar"><div class="pt">Ratios financiers &mdash; Analyse IA</div><div class="tb-r"><span class="tag tr2">3 ratios hors norme</span></div></div>
+<div class="topbar"><div class="pt">Ratios financiers</div><div class="tb-r">
+<select class="sel" id="ratios-mois" onchange="loadRatios()" style="margin-right:6px">
+<option value="">Année complète</option>
+<option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+<option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+<option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+<option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+</select>
+<button class="btn btn-p" onclick="exportPage('ratios')">📄 Exporter</button>
+</div></div>
 <div class="content">
 <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Liquidite et Solvabilite</div>
 <div class="rgrid">
@@ -3108,9 +3117,14 @@ async function loadResultat() {
 // ── Ratios ──
 async function loadRatios() {
   const annee = window._exercice || new Date().getFullYear();
-  const data = await api.get('/api/compta/ratios?annee='+annee);
+  const moisSel = document.getElementById('ratios-mois');
+  const mois = moisSel ? moisSel.value : '';
+  const url = '/api/compta/ratios?annee='+annee+(mois?'&mois='+mois:'');
+  const data = await api.get(url);
   const c = document.querySelector('#p-ratios .content');
   if (!c||!data) return;
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const periodeLabel = mois ? `${moisNoms[parseInt(mois)]} ${annee}` : `Année ${annee} (cumul annuel)`;
 
   const soldes = data.soldes || {};
   const det = data.details || {};
@@ -3125,7 +3139,7 @@ async function loadRatios() {
   const colorJours = (v, good, bad) => v <= good ? 'var(--g)' : v <= bad ? 'var(--a)' : 'var(--r)';
 
   c.innerHTML = `
-    <div class="fs" style="margin-bottom:1rem"><div class="fic">📊</div><div class="fb"><div class="ftt">Ratios financiers — Exercice ${annee}</div><div class="fdesc">Tous les indicateurs clés de votre santé financière</div></div></div>
+    <div class="fs" style="margin-bottom:1rem"><div class="fic">📊</div><div class="fb"><div class="ftt">Ratios financiers — ${periodeLabel}</div><div class="fdesc">Tous les indicateurs clés de votre santé financière. Utilisez le sélecteur en haut à droite pour changer la période.</div></div></div>
 
     <div class="card" style="margin-bottom:1rem">
       <div class="ct" style="margin-bottom:.75rem">💰 Soldes de gestion</div>
