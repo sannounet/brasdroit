@@ -363,3 +363,23 @@ class MouvementBancaire(Base):
     source = Column(String(20), default="nordigen")  # nordigen, import_csv, manuel
     nordigen_id = Column(String(100))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ─────────────────────────────────────────
+# BUDGET PRÉVISIONNEL
+# ─────────────────────────────────────────
+
+class BudgetPrevisionnel(Base):
+    __tablename__ = "budgets_previsionnels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entreprise_id = Column(Integer, ForeignKey("entreprises.id"), nullable=False)
+    annee = Column(Integer, nullable=False)
+    mois = Column(Integer, nullable=False)            # 1-12
+    categorie = Column(String(100), nullable=False)   # Ventes, Achats, Salaires, etc.
+    type_ligne = Column(String(20), nullable=False)   # "recette" ou "depense"
+    libelle = Column(String(200))
+    montant_prevu = Column(Numeric(12, 2), nullable=False, default=0)
+    notes = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())

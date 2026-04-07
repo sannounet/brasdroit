@@ -12,7 +12,9 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.models import (
     Declaration, BulletinPaie, Employe, MouvementBancaire, StatutDeclaration,
+    BudgetPrevisionnel,
 )
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/declarations", tags=["Déclarations"])
 
@@ -375,3 +377,130 @@ def budget_vs_reel(
         "resultat_annuel": round(total_revenus + total_depenses, 2),
         "mois": mois_data,
     }
+
+
+# ─── BUDGET PRÉVISIONNEL ───
+
+class BudgetLigneIn(BaseModel):
+    annee: int
+    mois: int
+    categorie: str
+    type_ligne: str  # recette ou depense
+    libelle: Optional[str] = None
+    montant_prevu: float
+    notes: Optional[str] = None
+
+
+class BudgetLigneUpdate(BaseModel):
+    categorie: Optional[str] = None
+    type_ligne: Optional[str] = None
+    libelle: Optional[str] = None
+    montant_prevu: Optional[float] = None
+    notes: Optional[str] = None
+
+
+@router.get("/budget-previsionnel")
+def list_budget_previsionnel(
+    annee: int = Query(...),
+    mois: Optional[int] = None,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Liste les lignes du budget prévisionnel pour une année (et optionnellement un mois)."""
+    q = db.query(BudgetPrevisionnel).filter(
+        BudgetPrevisionnel.entreprise_id == current_user.entreprise_id,
+        BudgetPrevisionnel.annee == annee,
+    )
+    if mois:
+        q = q.filter(BudgetPrevisionnel.mois == mois)
+    lignes = q.order_by(BudgetPrevisionnel.mois, BudgetPrevisionnel.type_ligne, BudgetPrevisionnel.categorie).all()
+
+    # Calculer les totaux
+    total_recettes = sum(float(l.montant_prevu) for l in lignes if l.type_ligne == "recette")
+    total_depenses = sum(float(l.montant_prevu) for l in lignes if l.type_ligne == "depense")
+
+    return {
+        "annee": annee,
+        "mois": mois,
+        "lignes": [{
+            "id": l.id,
+            "annee": l.annee,
+            "mois": l.mois,
+            "categorie": l.categorie,
+            "type_ligne": l.type_ligne,
+            "libelle": l.libelle,
+            "montant_prevu": float(l.montant_prevu),
+            "notes": l.notes,
+        } for l in lignes],
+        "total_recettes": total_recettes,
+        "total_depenses": total_depenses,
+        "resultat_previsionnel": total_recettes - total_depenses,
+    }
+
+
+@router.post("/budget-previsionnel")
+def create_budget_ligne(
+    data: BudgetLigneIn,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Créer une nouvelle ligne de budget prévisionnel."""
+    if data.type_ligne not in ("recette", "depense"):
+        raise HTTPException(400, "type_ligne doit être recette ou depense")
+    if data.mois < 1 or data.mois > 12:
+        raise HTTPException(400, "mois doit être entre 1 et 12")
+
+    ligne = BudgetPrevisionnel(
+        entreprise_id=current_user.entreprise_id,
+        annee=data.annee,
+        mois=data.mois,
+        categorie=data.categorie,
+        type_ligne=data.type_ligne,
+        libelle=data.libelle,
+        montant_prevu=data.montant_prevu,
+        notes=data.notes,
+    )
+    db.add(ligne)
+    db.commit()
+    db.refresh(ligne)
+    return {"id": ligne.id, "status": "ok"}
+
+
+@router.patch("/budget-previsionnel/{ligne_id}")
+def update_budget_ligne(
+    ligne_id: int,
+    data: BudgetLigneUpdate,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mettre à jour une ligne de budget prévisionnel."""
+    ligne = db.query(BudgetPrevisionnel).filter(
+        BudgetPrevisionnel.id == ligne_id,
+        BudgetPrevisionnel.entreprise_id == current_user.entreprise_id,
+    ).first()
+    if not ligne:
+        raise HTTPException(404, "Ligne introuvable")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(ligne, field, value)
+    db.commit()
+    return {"status": "ok"}
+
+
+@router.delete("/budget-previsionnel/{ligne_id}")
+def delete_budget_ligne(
+    ligne_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Supprimer une ligne de budget prévisionnel."""
+    ligne = db.query(BudgetPrevisionnel).filter(
+        BudgetPrevisionnel.id == ligne_id,
+        BudgetPrevisionnel.entreprise_id == current_user.entreprise_id,
+    ).first()
+    if not ligne:
+        raise HTTPException(404, "Ligne introuvable")
+    db.delete(ligne)
+    db.commit()
+    return {"status": "ok"}

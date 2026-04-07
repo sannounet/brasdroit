@@ -277,7 +277,8 @@ input[type=number]{-moz-appearance:textfield}
     <div class="ni" onclick="go('liasse')"><div class="ni-ic">&#9998;</div>Liasse fiscale<span class="nb-b">2050</span></div>
   </div>
   <div class="ns"><div class="nl">Previsions</div>
-    <div class="ni" onclick="go('budget')"><div class="ni-ic">&#9671;</div>Budget</div>
+    <div class="ni" onclick="go('budget')"><div class="ni-ic">&#9671;</div>Budget realise</div>
+    <div class="ni" onclick="go('budget-prev')"><div class="ni-ic">&#9670;</div>Budget previsionnel</div>
     <div class="ni" onclick="go('ecarts')"><div class="ni-ic">&#9650;</div>Ecarts + IA</div>
     <div class="ni" onclick="go('optim')"><div class="ni-ic">&#10022;</div>Optimisation IA</div>
   </div>
@@ -1338,6 +1339,14 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 </div>
 
+<!-- BUDGET PRÉVISIONNEL -->
+<div id="p-budget-prev" class="panel">
+<div class="topbar"><div class="pt">Budget previsionnel</div><div class="tb-r"><button class="btn btn-p" onclick="openModal('m-budget-ligne')">+ Nouvelle ligne</button></div></div>
+<div class="content" id="budget-prev-content">
+<div style="text-align:center;color:var(--t3);padding:2rem">Chargement...</div>
+</div>
+</div>
+
 <!-- PROFIL -->
 <div id="p-profil" class="panel">
 <div class="topbar"><div class="pt">Profil et paramètres</div><div class="tb-r"><button class="btn" onclick="go('dashboard')">← Retour dashboard</button></div></div>
@@ -1347,6 +1356,44 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- MODALS -->
+<div class="mo" id="m-budget-ligne">
+<div class="modal" style="width:480px">
+<div class="mh">Nouvelle ligne de budget previsionnel<span class="mc2" onclick="closeModal('m-budget-ligne')">&times;</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+  <div class="mrow"><div class="mlbl">Année</div><input type="number" id="bp-annee" value="2026"></div>
+  <div class="mrow"><div class="mlbl">Mois</div>
+    <select id="bp-mois">
+      <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+      <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+      <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+      <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+    </select>
+  </div>
+</div>
+<div class="mrow"><div class="mlbl">Type</div>
+  <select id="bp-type">
+    <option value="recette">💰 Recette (entrée)</option>
+    <option value="depense">💸 Dépense (sortie)</option>
+  </select>
+</div>
+<div class="mrow"><div class="mlbl">Catégorie</div>
+  <input type="text" id="bp-categorie" placeholder="Ex: Ventes, Salaires, Loyer, Marketing..." list="dl-bp-cat">
+  <datalist id="dl-bp-cat">
+    <option value="Ventes prestations"><option value="Ventes produits"><option value="Subventions">
+    <option value="Salaires"><option value="Charges sociales"><option value="Loyer">
+    <option value="Fournisseurs"><option value="Marketing"><option value="Frais bancaires">
+    <option value="Assurances"><option value="Télécom"><option value="Investissement">
+  </datalist>
+</div>
+<div class="mrow"><div class="mlbl">Libellé (optionnel)</div><input type="text" id="bp-libelle" placeholder="Précision..."></div>
+<div class="mrow"><div class="mlbl">Montant prévu (€)</div><input type="number" id="bp-montant" step="0.01" placeholder="0.00"></div>
+<div class="mrow"><div class="mlbl">Notes (optionnel)</div><textarea id="bp-notes" rows="2" placeholder="Commentaire..."></textarea></div>
+<div style="display:flex;gap:7px;margin-top:1rem">
+  <button class="btn btn-p" style="flex:1" onclick="submitBudgetLigne()">Enregistrer</button>
+  <button class="btn" onclick="closeModal('m-budget-ligne')">Annuler</button>
+</div>
+</div></div>
+
 <div class="mo" id="m-ecriture">
 <div class="modal" style="width:480px">
 <div class="mh">Nouvelle écriture comptable<span class="mc2" onclick="closeModal('m-ecriture')">&times;</span></div>
@@ -2210,6 +2257,7 @@ window._goLoaders = {
     'ecarts': loadEcarts,
     'optim': loadOptimisation,
     'profil': function(){ if(window.loadProfil) window.loadProfil(); },
+    'budget-prev': function(){ if(window.loadBudgetPrev) window.loadBudgetPrev(); },
   };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -2900,6 +2948,90 @@ async function loadOptimisation() {
     <div class="fs" style="margin-bottom:1rem"><div class="fic">✦</div><div class="fb"><div class="ftt">${suggestions.length} suggestions d'optimisation identifiées par l'IA</div></div></div>
     ${html}` : '<div class="card" style="text-align:center;padding:2rem"><div style="font-size:14px;color:var(--g)">✓ Aucune optimisation suggérée — tout est optimal</div></div>';
 }
+
+// ── Budget prévisionnel ──
+window.loadBudgetPrev = async function() {
+  const annee = window._exercice || new Date().getFullYear();
+  const data = await api.get('/api/declarations/budget-previsionnel?annee=' + annee);
+  const c = document.getElementById('budget-prev-content');
+  if (!c) return;
+  if (!data) { c.innerHTML = '<div style="color:var(--r)">Erreur de chargement</div>'; return; }
+
+  const moisNoms = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const lignes = data.lignes || [];
+
+  // Grouper par mois
+  const parMois = {};
+  for (let m = 1; m <= 12; m++) parMois[m] = {recettes: [], depenses: []};
+  lignes.forEach(l => {
+    if (l.type_ligne === 'recette') parMois[l.mois].recettes.push(l);
+    else parMois[l.mois].depenses.push(l);
+  });
+
+  // Tableau récap mensuel
+  const recapRows = Object.entries(parMois).map(([mois, m]) => {
+    const totRec = m.recettes.reduce((s,l) => s + l.montant_prevu, 0);
+    const totDep = m.depenses.reduce((s,l) => s + l.montant_prevu, 0);
+    const result = totRec - totDep;
+    return `<tr><td><strong>${moisNoms[mois]} ${annee}</strong></td><td class="tr pos">${fmtEur(totRec)}</td><td class="tr neg">${fmtEur(totDep)}</td><td class="tr ${result>=0?'pos':'neg'}">${fmtEur(result)}</td><td>${m.recettes.length+m.depenses.length} lignes</td></tr>`;
+  }).join('');
+
+  // Liste détaillée des lignes
+  const lignesRows = lignes.map(l => {
+    const isRec = l.type_ligne === 'recette';
+    return `<tr><td>${moisNoms[l.mois]}</td><td><span class="tag ${isRec?'tg':'tr2'}">${isRec?'Recette':'Dépense'}</span></td><td>${l.categorie}</td><td>${l.libelle||''}</td><td class="tr ${isRec?'pos':'neg'}">${fmtEur(l.montant_prevu)}</td><td><button class="btn btn-sm btn-d" onclick="deleteBudgetLigne(${l.id})">×</button></td></tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--t3);padding:1rem">Aucune ligne. Cliquez sur "+ Nouvelle ligne" pour commencer.</td></tr>';
+
+  c.innerHTML = `
+    <div class="fi" style="margin-bottom:1rem"><div class="fic">📅</div><div class="fb"><div class="ftt">Budget prévisionnel ${annee}</div><div class="fdesc">Planifiez vos recettes et dépenses prévues pour chaque mois. Comparez ensuite avec le réel.</div></div></div>
+    <div class="mg mg3">
+      <div class="mc"><div class="ml">Recettes prévues</div><div class="mv pos">${fmtEur(data.total_recettes)}</div></div>
+      <div class="mc"><div class="ml">Dépenses prévues</div><div class="mv neg">${fmtEur(data.total_depenses)}</div></div>
+      <div class="mc"><div class="ml">Résultat prévisionnel</div><div class="mv" style="color:${data.resultat_previsionnel>=0?'var(--g)':'var(--r)'}">${fmtEur(data.resultat_previsionnel)}</div></div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Récapitulatif mensuel</div>
+      <table><thead><tr><th>Mois</th><th class="tr">Recettes</th><th class="tr">Dépenses</th><th class="tr">Résultat</th><th>Détails</th></tr></thead>
+      <tbody>${recapRows}</tbody></table>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:.75rem">Toutes les lignes (${lignes.length})</div>
+      <table><thead><tr><th>Mois</th><th>Type</th><th>Catégorie</th><th>Libellé</th><th class="tr">Montant</th><th></th></tr></thead>
+      <tbody>${lignesRows}</tbody></table>
+    </div>`;
+};
+
+window.submitBudgetLigne = async function() {
+  const annee = parseInt(document.getElementById('bp-annee')?.value || '0');
+  const mois = parseInt(document.getElementById('bp-mois')?.value || '0');
+  const type_ligne = document.getElementById('bp-type')?.value || '';
+  const categorie = document.getElementById('bp-categorie')?.value || '';
+  const libelle = document.getElementById('bp-libelle')?.value || '';
+  const montant_prevu = parseFloat(document.getElementById('bp-montant')?.value || '0');
+  const notes = document.getElementById('bp-notes')?.value || '';
+
+  if (!annee || !mois || !categorie || !montant_prevu) {
+    showToast('Année, mois, catégorie et montant requis', 'error');
+    return;
+  }
+
+  const data = await api.post('/api/declarations/budget-previsionnel', {
+    annee, mois, categorie, type_ligne, libelle, montant_prevu, notes
+  });
+
+  if (data) {
+    showToast('Ligne enregistrée ✓', 'success');
+    closeModal('m-budget-ligne');
+    ['bp-categorie','bp-libelle','bp-montant','bp-notes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    loadBudgetPrev();
+  }
+};
+
+window.deleteBudgetLigne = async function(id) {
+  if (!confirm('Supprimer cette ligne ?')) return;
+  const data = await api.delete('/api/declarations/budget-previsionnel/' + id);
+  if (data) { showToast('Ligne supprimée ✓', 'success'); loadBudgetPrev(); }
+};
 
 // ── Profil ──
 window.loadProfil = async function() {
