@@ -2751,28 +2751,36 @@ window._lettrageSelected = {mouvement: null, ecriture: null};
 
 async function loadLettrage() {
   const data = await api.get('/api/compta/lettrage');
-  const c = document.getElementById('lettrage-content');
-  if (!c||!data) return;
+  if (!data) return;
+  window._lettrageData = data;
+  renderLettrage(data);
+}
 
-  const mvts = (data.mouvements||[]).slice(0, 100);
+function renderLettrage(data) {
+  const c = document.getElementById('lettrage-content');
+  if (!c) return;
+
+  const mvts = (data.mouvements_bancaires||data.mouvements||[]).slice(0, 100);
   const ecrs = (data.ecritures||[]).slice(0, 100);
   const mvtsLettres = mvts.filter(m => m.is_lettree).length;
   const ecrsLettres = ecrs.filter(e => e.is_lettree).length;
   const tauxRap = mvts.length > 0 ? Math.round((mvtsLettres/mvts.length)*100) : 0;
 
   const mvtsRows = mvts.map(m => {
+    const date = m.date || m.date_operation || '';
     const cls = m.montant >= 0 ? 'pos' : 'neg';
     const tag = m.is_lettree ? `<span class="tag tg">${m.lettre||'✓'}</span>` : '<span class="tag tw2">—</span>';
-    const selected = window._lettrageSelected.mouvement === m.id ? 'background:var(--bb);border:2px solid var(--b)' : '';
-    const checkbox = m.is_lettree ? `<button class="btn btn-sm btn-d" onclick="event.stopPropagation();delettrer('${m.lettre}')" title="Délettrer">×</button>` : `<input type="radio" name="mvt-sel" ${window._lettrageSelected.mouvement===m.id?'checked':''} onchange="selectLettrageMvt(${m.id})">`;
-    return `<tr style="${selected};cursor:pointer" onclick="selectLettrageMvt(${m.id})"><td>${checkbox}</td><td>${m.date_operation}</td><td style="font-size:11.5px">${m.libelle.substring(0,40)}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${tag}</td></tr>`;
+    const selected = window._lettrageSelected.mouvement === m.id ? 'background:var(--bb)' : '';
+    const action = m.is_lettree ? `<button class="btn btn-sm btn-d" onclick="event.stopPropagation();delettrer('${m.lettre}')" title="Délettrer">×</button>` : `<input type="radio" name="mvt-sel" ${window._lettrageSelected.mouvement===m.id?'checked':''} onclick="event.stopPropagation();selectLettrageMvt(${m.id})">`;
+    return `<tr style="${selected};cursor:pointer" onclick="if(!${m.is_lettree})selectLettrageMvt(${m.id})"><td>${action}</td><td>${date}</td><td style="font-size:11.5px">${(m.libelle||'').substring(0,40)}</td><td class="tr ${cls}">${fmtEur(m.montant)}</td><td>${tag}</td></tr>`;
   }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--t3)">Aucun mouvement</td></tr>';
 
   const ecrsRows = ecrs.map(e => {
+    const date = e.date || e.date_ecriture || '';
     const tag = e.is_lettree ? `<span class="tag tg">${e.lettre||'✓'}</span>` : '<span class="tag tw2">—</span>';
-    const selected = window._lettrageSelected.ecriture === e.id ? 'background:var(--gb);border:2px solid var(--g)' : '';
-    const checkbox = e.is_lettree ? '' : `<input type="radio" name="ecr-sel" ${window._lettrageSelected.ecriture===e.id?'checked':''} onchange="selectLettrageEcr(${e.id})">`;
-    return `<tr style="${selected};cursor:pointer" onclick="selectLettrageEcr(${e.id})"><td>${checkbox}</td><td>${e.date_ecriture}</td><td class="mono">${e.compte_debit}</td><td style="font-size:11.5px">${e.libelle.substring(0,30)}</td><td class="tr">${fmtEur(e.montant)}</td><td>${tag}</td></tr>`;
+    const selected = window._lettrageSelected.ecriture === e.id ? 'background:var(--gb)' : '';
+    const action = e.is_lettree ? '' : `<input type="radio" name="ecr-sel" ${window._lettrageSelected.ecriture===e.id?'checked':''} onclick="event.stopPropagation();selectLettrageEcr(${e.id})">`;
+    return `<tr style="${selected};cursor:pointer" onclick="if(!${e.is_lettree})selectLettrageEcr(${e.id})"><td>${action}</td><td>${date}</td><td class="mono">${e.compte_debit||''}</td><td style="font-size:11.5px">${(e.libelle||'').substring(0,30)}</td><td class="tr">${fmtEur(e.montant)}</td><td>${tag}</td></tr>`;
   }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--t3)">Aucune écriture</td></tr>';
 
   c.innerHTML = `
@@ -2810,12 +2818,20 @@ async function loadLettrage() {
 
 window.selectLettrageMvt = function(id) {
   window._lettrageSelected.mouvement = id;
-  loadLettrage();
+  // Mise à jour visuelle immédiate sans re-render complet
+  const btn = document.getElementById('btn-lettrer-manuel');
+  if (btn) btn.disabled = !(window._lettrageSelected.mouvement && window._lettrageSelected.ecriture);
+  updateLettrageInfo();
+  // Re-render pour mettre à jour le highlight
+  if (window._lettrageData) renderLettrage(window._lettrageData);
 };
 
 window.selectLettrageEcr = function(id) {
   window._lettrageSelected.ecriture = id;
-  loadLettrage();
+  const btn = document.getElementById('btn-lettrer-manuel');
+  if (btn) btn.disabled = !(window._lettrageSelected.mouvement && window._lettrageSelected.ecriture);
+  updateLettrageInfo();
+  if (window._lettrageData) renderLettrage(window._lettrageData);
 };
 
 function updateLettrageInfo() {
